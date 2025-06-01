@@ -40,8 +40,8 @@ DM me or email at eumiejhong@gmail.com
 
 ## 📚 Related Projects
 
-- [Mood Diary Journal App](https://github.com/eumiejhong/mood-diary) — A journaling tool that connects emotion to text
-- [GetOut Campsite Finder](https://github.com/eumiejhong/getout) — A nature-forward rec locator project
+- [Mood Diary Journal App](https://github.com/eumiejhong/Mood-Diary-Front-End) — A journaling tool that connects emotion to text
+- [GetOut Campsite Finder](https://github.com/eumiejhong/GetOut-App) — A nature-forward rec locator project
 
 ## 🛑 Disclaimer
 
