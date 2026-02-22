@@ -1,11 +1,15 @@
 import base64
-import openai
 from openai import OpenAI
 import os
-import re
 import json
 
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+_client = None
+
+def _get_client():
+    global _client
+    if _client is None:
+        _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    return _client
 
 
 def describe_image_with_gpt4v(image_file, item_name_hint=None):
@@ -37,7 +41,7 @@ def describe_image_with_gpt4v(image_file, item_name_hint=None):
     }}
         """
 
-    response = client.chat.completions.create(
+    response = _get_client().chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": "You are a structured visual fashion assistant."},

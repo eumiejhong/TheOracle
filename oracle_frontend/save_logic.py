@@ -1,21 +1,17 @@
-import django
-from django.conf import settings
-import os
-import sys
-from sentence_transformers import SentenceTransformer
 from datetime import datetime
 
-# Adding Django project to the Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'oracle_backend.settings')
-django.setup()
-
 from oracle_data.models import UserStyleProfile, DailyStyleInput
-from oracle_frontend.utils import combine_style_summary  
+from oracle_frontend.utils import combine_style_summary
 from oracle_frontend.archetype_generator import generate_style_archetype, generate_today_styling_suggestion
 
-# Load BGE embedding model
-bge = SentenceTransformer("BAAI/bge-base-en-v1.5")
+_bge = None
+
+def get_bge_model():
+    global _bge
+    if _bge is None:
+        from sentence_transformers import SentenceTransformer
+        _bge = SentenceTransformer("BAAI/bge-base-en-v1.5")
+    return _bge
 
 def save_style_profile(profile: dict, user_id: str):
     appearance = profile["appearance"]
@@ -26,7 +22,7 @@ def save_style_profile(profile: dict, user_id: str):
     summary = combine_style_summary(profile)
 
     # Embed it
-    embedding = bge.encode(summary, normalize_embeddings=True)
+    embedding = get_bge_model().encode(summary, normalize_embeddings=True)
     embedding_bytes = embedding.tobytes()
 
     style_archetype = generate_style_archetype(summary, user_id)

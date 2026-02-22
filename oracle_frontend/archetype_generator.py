@@ -6,11 +6,15 @@ from oracle_data.models import WardrobeItem
 from oracle_frontend.shared_helpers import get_serialized_wardrobe, fetch_user_wardrobe
 from oracle_frontend.utils import update_last_used
 
-
 load_dotenv()
 
-openai_api_key = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=openai_api_key)
+_client = None
+
+def get_openai_client():
+    global _client
+    if _client is None:
+        _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    return _client
 
 
 def generate_style_archetype(summary_text: str, user_id: str) -> str:
@@ -39,7 +43,7 @@ Style Profile:
 
 {wardrobe_note}"""
 
-    response = client.chat.completions.create(
+    response = get_openai_client().chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.9
@@ -136,7 +140,7 @@ Weather: {daily_context.get("weather", "")}
         prompt += f"\nVisual reference: {json.dumps(image_desc, indent=2)}"
 
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model=model_name,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.8
