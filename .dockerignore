@@ -1,0 +1,15 @@
+.env
+venv/
+db.sqlite3
+media/
+temp/
+staticfiles/
+oracle_dataset/
+.git/
+.cache/
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+.cursor/
