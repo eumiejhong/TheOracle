@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Style Profile — The Oracle{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-section {
+        padding: var(--space-lg) 0;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .profile-section:last-of-type {
+        border-bottom: none;
+    }
+    
+    .profile-section-title {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        margin-bottom: var(--space-md);
+    }
+    
+    .radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .radio-option {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: var(--bg-secondary);
+        cursor: pointer;
+        transition: background 200ms ease;
+    }
+    
+    .radio-option:hover {
+        background: var(--bg-accent);
+    }
+    
+    .radio-option input[type="radio"] {
+        margin-top: 0.2rem;
+        accent-color: var(--text-primary);
+    }
+    
+    .radio-option-label {
+        font-size: 0.9rem;
+        color: var(--text-primary);
+    }
+    
+    .field-question {
+        font-size: 0.95rem;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+    
+    .profile-form .form-group {
+        margin-bottom: var(--space-md);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="container" style="max-width: 650px;">
+        <header class="dashboard-header">
+            <h3>Profile</h3>
+            <h1 style="font-size: 2rem;">Tell me about yourself.</h1>
+            <p style="color: var(--text-muted); margin-top: var(--space-xs); font-size: 0.95rem;">
+                The Oracle reads between the lines. Be honest about your contradictions.
+            </p>
+        </header>
+
+        {% if save_error %}
+        <div style="padding: var(--space-md); background: #fdf2f2; border: 1px solid #e8c4c4; margin-bottom: var(--space-lg);">
+            <p style="color: #8b3a3a; font-size: 0.875rem;">{{ save_error }}</p>
+        </div>
+        {% endif %}
+
+        {% if form.errors %}
+        <div style="padding: var(--space-md); background: #fdf2f2; border: 1px solid #e8c4c4; margin-bottom: var(--space-lg);">
+            <p style="color: #8b3a3a; font-size: 0.875rem; font-weight: 600;">Please complete the required fields:</p>
+            {% for field in form %}
+                {% for error in field.errors %}
+                <p style="color: #8b3a3a; font-size: 0.8rem;">{{ field.label }}: {{ error }}</p>
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+            <p style="color: #8b3a3a; font-size: 0.8rem;">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" class="profile-form">
+            {% csrf_token %}
+            
+            <!-- Appearance Section -->
+            <div class="profile-section">
+                <h2 class="profile-section-title">Appearance</h2>
+                
+                {% for field in form %}
+                    {% if field.name in 'skin_tone,contrast_level,undertone' %}
+                        <div class="form-group">
+                            <p class="field-question">{{ field.label }}</p>
+                            {% if field.field.widget.input_type == 'radio' or 'RadioSelect' in field.field.widget|stringformat:"s" %}
+                                <div class="radio-group">
+                                    {% for choice in field.field.choices %}
+                                        <label class="radio-option">
+                                            <input type="radio" name="{{ field.name }}" value="{{ choice.0 }}" {% if field.value == choice.0 %}checked{% endif %}>
+                                            <span class="radio-option-label">{{ choice.1 }}</span>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            <!-- Style Identity Section -->
+            <div class="profile-section">
+                <h2 class="profile-section-title">Style Identity</h2>
+                
+                {% for field in form %}
+                    {% if field.name in 'face_detail_preference,archetypes' %}
+                        <div class="form-group">
+                            <p class="field-question">{{ field.label }}</p>
+                            <div class="radio-group">
+                                {% for choice in field.field.choices %}
+                                    <label class="radio-option">
+                                        <input type="radio" name="{{ field.name }}" value="{{ choice.0 }}" {% if field.value == choice.0 %}checked{% endif %}>
+                                        <span class="radio-option-label">{{ choice.1 }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if field.name in 'texture_notes,color_pref,style_constraints,aspirational_style' %}
+                        <div class="form-group">
+                            <p class="field-question">{{ field.label }}</p>
+                            <textarea name="{{ field.name }}" rows="3" placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}" style="resize: vertical;">{{ field.value|default:'' }}</textarea>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            <!-- Lifestyle Section -->
+            <div class="profile-section">
+                <h2 class="profile-section-title">Lifestyle</h2>
+                
+                {% for field in form %}
+                    {% if field.name == 'life_event' %}
+                        <div class="form-group">
+                            <p class="field-question">{{ field.label }}</p>
+                            <textarea name="{{ field.name }}" rows="2" placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}" style="resize: vertical;">{{ field.value|default:'' }}</textarea>
+                        </div>
+                    {% endif %}
+                    
+                    {% if field.name in 'mobility,climate_wear,dress_formality,wardrobe_phase,shopping_behavior,budget_preference' %}
+                        <div class="form-group">
+                            <p class="field-question">{{ field.label }}</p>
+                            <div class="radio-group">
+                                {% for choice in field.field.choices %}
+                                    <label class="radio-option">
+                                        <input type="radio" name="{{ field.name }}" value="{{ choice.0 }}" {% if field.value == choice.0 %}checked{% endif %}>
+                                        <span class="radio-option-label">{{ choice.1 }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div style="padding: var(--space-lg) 0;">
+                <button type="submit" class="btn btn-primary" id="save-btn" style="width: 100%;">
+                    Save Profile
+                </button>
+            </div>
+        </form>
+
+        <div style="padding-bottom: var(--space-lg);">
+            <a href="{% url 'dashboard' %}" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);">← Return to Wardrobe</a>
+        </div>
+    </div>
+</div>
+
+<div id="loading-overlay" style="display:none; position:fixed; inset:0; background:rgba(252,250,247,0.92); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
+    <div class="oracle-spinner"></div>
+    <p style="margin-top:1.5rem; font-family:var(--font-display); font-size:1.1rem; color:var(--text-primary);">The Oracle is reading your profile...</p>
+    <p style="margin-top:0.5rem; font-size:0.85rem; color:var(--text-muted);">This may take a moment.</p>
+</div>
+
+<style>
+.oracle-spinner {
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--border, #ddd);
+    border-top-color: var(--text-primary, #1a1a1a);
+    border-radius: 50%;
+    animation: oracle-spin 0.8s linear infinite;
+}
+@keyframes oracle-spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+document.querySelector('.profile-form').addEventListener('submit', function() {
+    var btn = document.getElementById('save-btn');
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    document.getElementById('loading-overlay').style.display = 'flex';
+});
+</script>
+{% endblock %}

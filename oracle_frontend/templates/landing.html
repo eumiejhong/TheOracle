@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}The Oracle{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="hero">
+    <p class="hero-label animate animate-delay-1">Personal Style Intelligence</p>
+    <h1 class="animate animate-delay-2">The Oracle</h1>
+    <p class="hero-description animate animate-delay-3">
+        Understanding what to wear is understanding who you are. 
+        The Oracle reads your wardrobe like a text—and translates it into daily decisions.
+    </p>
+    <div class="animate animate-delay-3" style="display: flex; gap: var(--space-sm); margin-top: var(--space-md);">
+        <a href="{% url 'account_signup' %}" class="btn btn-primary">Begin</a>
+        <a href="{% url 'account_login' %}" class="btn btn-secondary">Sign In</a>
+    </div>
+</section>
+
+<!-- Process -->
+<section class="section">
+    <div class="container">
+        <div class="process">
+            <div class="process-step">
+                <span class="process-number">i.</span>
+                <h2>Profile</h2>
+                <p>Share your aesthetic tensions. The contradictions are what make you interesting.</p>
+            </div>
+            <div class="process-step">
+                <span class="process-number">ii.</span>
+                <h2>Wardrobe</h2>
+                <p>Upload your pieces. The Oracle sees the relationships between them.</p>
+            </div>
+            <div class="process-step">
+                <span class="process-number">iii.</span>
+                <h2>Guidance</h2>
+                <p>Each day, receive an outfit that feels correct. Not prescribed—discovered.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Philosophy -->
+<section class="philosophy">
+    <p class="philosophy-quote">
+        "Style is not about rules. It is about the conversation between 
+        who you are and who you are becoming."
+    </p>
+    <p style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-muted);">
+        — The Oracle
+    </p>
+</section>
+
+<!-- Archetype Preview -->
+<section class="section">
+    <div class="container" style="max-width: 900px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); align-items: start;">
+            <div>
+                <h3>Style Archetypes</h3>
+                <h2 style="margin: var(--space-sm) 0 var(--space-md);">Your aesthetic identity, articulated.</h2>
+                <p>
+                    The Oracle doesn't categorize—it understands. Your archetype emerges from 
+                    the tensions in how you dress: structure and softness, visibility and restraint.
+                </p>
+            </div>
+            <div class="card">
+                <h3>Example Archetype</h3>
+                <h2 style="margin: var(--space-xs) 0 var(--space-sm); font-size: 1.5rem;">Quiet Authority</h2>
+                <p class="oracle-response" style="border: none; padding: var(--space-sm) 0; font-size: 1.125rem;">
+                    "You dress like someone who doesn't need to explain. Structure speaks for you, 
+                    but you've learned to soften its edges..."
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Final CTA -->
+<section class="section text-center" style="padding: var(--space-xl) 0;">
+    <div class="container">
+        <h2 style="font-size: 2rem; margin-bottom: var(--space-md);">
+            Your wardrobe already knows.
+        </h2>
+        <a href="{% url 'account_signup' %}" class="btn btn-primary">Enter The Oracle</a>
+    </div>
+</section>
+{% endblock %}

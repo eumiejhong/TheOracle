@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load image_filters %}
+
+{% block title %}Guidance — The Oracle{% endblock %}
+
+{% block extra_css %}
+<style>
+    .outfit-visual {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-top: var(--space-md);
+    }
+    .outfit-visual-item {
+        background: var(--bg-secondary);
+        overflow: hidden;
+    }
+    .outfit-visual-item img {
+        width: 100%;
+        aspect-ratio: 3 / 4;
+        object-fit: cover;
+        display: block;
+    }
+    .outfit-visual-item-label {
+        display: block;
+        padding: 0.4rem 0.5rem;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="container" style="max-width: 900px;">
+        <header class="dashboard-header">
+            <h3>Session Complete</h3>
+            <h1 style="font-size: 2.5rem;">Today's Look</h1>
+        </header>
+
+        <!-- Context Summary - Clean Display -->
+        <div style="padding: var(--space-md) 0; border-bottom: 1px solid var(--border);">
+            <div class="context-summary">
+                <span class="context-label">Mood</span>
+                <span class="context-value">{{ context.mood_today }}</span>
+                
+                <span class="context-label">Occasion</span>
+                <span class="context-value">{{ context.occasion }}</span>
+                
+                <span class="context-label">Weather</span>
+                <span class="context-value">{{ context.weather }}</span>
+                
+                {% if context.item_focus %}
+                <span class="context-label">Focus</span>
+                <span class="context-value">{{ context.item_focus }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Oracle Suggestion -->
+        <div style="padding: var(--space-lg) 0; border-bottom: 1px solid var(--border);">
+            <h3>The Oracle Suggests</h3>
+            <div class="oracle-response" style="border: none; padding-top: var(--space-sm);">
+                {{ outfit_suggestion|strip_markdown|linebreaks }}
+            </div>
+        </div>
+
+        <!-- Outfit Visual - Show matching wardrobe items -->
+        {% if matched_items or uploaded_item_visual %}
+        <div style="padding: var(--space-lg) 0; border-bottom: 1px solid var(--border);">
+            <h3>Your Look</h3>
+            <div class="outfit-visual">
+                {% if uploaded_item_visual %}
+                <div class="outfit-visual-item" style="border: 2px solid var(--text-primary);">
+                    <img src="data:image/jpeg;base64,{{ uploaded_item_visual.image_b64 }}" alt="{{ uploaded_item_visual.name }}">
+                    <span class="outfit-visual-item-label">{{ uploaded_item_visual.name }}</span>
+                </div>
+                {% endif %}
+                {% for item in matched_items %}
+                <div class="outfit-visual-item">
+                    {% if item.image %}
+                        <img src="data:image/jpeg;base64,{{ item.image|b64encode }}" alt="{{ item.name }}">
+                    {% else %}
+                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--bg-secondary);">
+                            <span style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);">{{ item.category }}</span>
+                        </div>
+                    {% endif %}
+                    <span class="outfit-visual-item-label">{{ item.name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if proposed_item %}
+        <!-- Add to Wardrobe -->
+        <div style="padding: var(--space-lg) 0; border-bottom: 1px solid var(--border);">
+            <h3>Add to Wardrobe?</h3>
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: var(--space-lg); align-items: start; margin-top: var(--space-md);">
+                {% if proposed_item.image_base64 %}
+                <img src="data:image/jpeg;base64,{{ proposed_item.image_base64 }}" 
+                     style="width: 150px; aspect-ratio: 3/4; object-fit: cover;">
+                {% endif %}
+                <div>
+                    <p style="font-size: 1.1rem; font-weight: 500;">{{ proposed_item.name }}</p>
+                    <form id="add-to-wardrobe-form" style="margin-top: var(--space-md);">
+                        {% csrf_token %}
+                        <input type="hidden" name="item_name" value="{{ proposed_item.name }}">
+                        <input type="hidden" name="image_b64" value="{{ proposed_item.image_base64 }}">
+                        <div class="form-group">
+                            <label class="form-label">Category</label>
+                            <select name="category">
+                                <option value="Top">Top</option>
+                                <option value="Bottom">Bottom</option>
+                                <option value="Dress">Dress</option>
+                                <option value="Outerwear">Outerwear</option>
+                                <option value="Shoes">Shoes</option>
+                                <option value="Bag">Bag</option>
+                                <option value="Accessory">Accessory</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add to Wardrobe</button>
+                    </form>
+                    <div id="add-result" style="margin-top: var(--space-sm);"></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Feedback -->
+        <div style="padding: var(--space-lg) 0; border-bottom: 1px solid var(--border);">
+            <h3>Feedback</h3>
+            <div id="feedback-section" style="margin-top: var(--space-sm);">
+                <div id="feedback-buttons" style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary rating-btn" data-rating="loved">Loved it</button>
+                    <button type="button" class="btn btn-secondary rating-btn" data-rating="meh">Neutral</button>
+                    <button type="button" class="btn btn-secondary rating-btn" data-rating="dislike">Not for me</button>
+                </div>
+                <div id="feedback-result" style="display: none; padding: 0.5rem 1rem; background: var(--bg-secondary);"></div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div style="padding: var(--space-lg) 0; display: flex; gap: var(--space-sm);">
+            <a href="{% url 'daily_input' %}" class="btn btn-primary">Try Again</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Wardrobe</a>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCookie(name) {
+    const cookieStr = document.cookie;
+    const cookies = cookieStr ? cookieStr.split("; ") : [];
+    for (let cookie of cookies) {
+        if (cookie.startsWith(name + "=")) {
+            return decodeURIComponent(cookie.split("=")[1]);
+        }
+    }
+    return null;
+}
+
+// Resize image to max dimensions while maintaining aspect ratio
+function resizeImage(base64Str, maxWidth = 800, maxHeight = 1000, quality = 0.8) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = function() {
+            let width = img.width;
+            let height = img.height;
+            
+            // Calculate new dimensions
+            if (width > maxWidth || height > maxHeight) {
+                const ratio = Math.min(maxWidth / width, maxHeight / height);
+                width = Math.round(width * ratio);
+                height = Math.round(height * ratio);
+            }
+            
+            // Create canvas and draw resized image
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Get compressed base64 (without data URL prefix)
+            const resized = canvas.toDataURL('image/jpeg', quality);
+            resolve(resized.split(',')[1]);  // Return just the base64 part
+        };
+        img.onerror = function() {
+            // If image fails to load, return original
+            resolve(base64Str.includes(',') ? base64Str.split(',')[1] : base64Str);
+        };
+        // Handle both with and without data URL prefix
+        img.src = base64Str.startsWith('data:') ? base64Str : 'data:image/jpeg;base64,' + base64Str;
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Add to wardrobe form
+    const form = document.getElementById("add-to-wardrobe-form");
+    if (form) {
+        form.addEventListener("submit", async function (e) {
+            e.preventDefault();
+            
+            // Show loading state
+            document.getElementById("add-result").innerHTML = `<span style="color: var(--text-muted);">Saving...</span>`;
+            
+            // Get the base64 image and resize it
+            const imageInput = form.querySelector('input[name="image_b64"]');
+            let imageB64 = imageInput ? imageInput.value : '';
+            
+            if (imageB64) {
+                try {
+                    // Resize to max 800x1000, quality 0.8
+                    imageB64 = await resizeImage(imageB64, 800, 1000, 0.8);
+                } catch (err) {
+                    console.warn('Image resize failed, using original:', err);
+                }
+            }
+            
+            // Build form data with resized image
+            const formData = new FormData();
+            formData.append('item_name', form.querySelector('input[name="item_name"]').value);
+            formData.append('category', form.querySelector('select[name="category"]').value);
+            formData.append('image_b64', imageB64);
+
+            fetch("{% url 'add_from_daily_view' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": getCookie("csrftoken")
+                },
+                body: formData
+            })
+            .then(response => {
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    return response.json().then(data => ({status: response.status, data}));
+                } else {
+                    // Not JSON - probably an error page
+                    return response.text().then(text => {
+                        console.error("Server returned non-JSON:", text.substring(0, 500));
+                        throw new Error(`Server error (${response.status})`);
+                    });
+                }
+            })
+            .then(({status, data}) => {
+                if (status === 200) {
+                    document.getElementById("add-result").innerHTML = `<span style="color: var(--text-secondary);">${data.message}</span>`;
+                } else {
+                    document.getElementById("add-result").innerHTML = `<span style="color: var(--text-muted);">${data.message || 'Error saving item.'}</span>`;
+                }
+            })
+            .catch(err => {
+                document.getElementById("add-result").innerHTML = `<span style="color: var(--text-muted);">${err.message}</span>`;
+                console.error("Error:", err);
+            });
+        });
+    }
+    
+    // Rating buttons
+    const ratingButtons = document.querySelectorAll('.rating-btn');
+    ratingButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const rating = this.dataset.rating;
+            const formData = new FormData();
+            formData.append('rating', rating);
+            
+            fetch("{% url 'submit_feedback' suggestion.id %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": getCookie("csrftoken"),
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Hide buttons, show result
+                    document.getElementById('feedback-buttons').style.display = 'none';
+                    const resultEl = document.getElementById('feedback-result');
+                    resultEl.style.display = 'block';
+                    resultEl.textContent = data.rating_display;
+                }
+            })
+            .catch(err => {
+                console.error('Error submitting feedback:', err);
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

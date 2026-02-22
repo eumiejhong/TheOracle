@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load image_filters %}
+
+{% block title %}Profile Saved — The Oracle{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="container" style="max-width: 700px;">
+        <header class="dashboard-header" style="text-align: center;">
+            <h3>Profile Updated</h3>
+            <h1 style="font-size: 2rem;">The Oracle has listened.</h1>
+        </header>
+
+        <!-- Archetype Display -->
+        {% if profile.style_archetype %}
+        <div style="padding: var(--space-lg) 0; border-bottom: 1px solid var(--border);">
+            <h3>Your Archetype</h3>
+            <div class="oracle-response" style="border: none; padding-top: var(--space-sm);">
+                {{ profile.style_archetype|strip_markdown|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Profile Summary -->
+        <div style="padding: var(--space-lg) 0;">
+            <h3>Your Profile</h3>
+            
+            <div style="margin-top: var(--space-md);">
+                <!-- Appearance -->
+                <div style="margin-bottom: var(--space-md);">
+                    <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.5rem;">Appearance</p>
+                    <p style="color: var(--text-secondary);">
+                        {{ profile.appearance.skin_tone }} · {{ profile.appearance.contrast_level }} · {{ profile.appearance.undertone }}
+                    </p>
+                </div>
+                
+                <!-- Style -->
+                <div style="margin-bottom: var(--space-md);">
+                    <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.5rem;">Style</p>
+                    <p style="color: var(--text-secondary);">
+                        {{ profile.style_identity.archetypes }}
+                        {% if profile.style_identity.aspirational_style %}
+                            · Inspired by {{ profile.style_identity.aspirational_style }}
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <!-- Lifestyle -->
+                <div style="margin-bottom: var(--space-md);">
+                    <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.5rem;">Lifestyle</p>
+                    <p style="color: var(--text-secondary);">
+                        {{ profile.lifestyle.dress_formality }} · {{ profile.lifestyle.climate }} · {{ profile.lifestyle.wardrobe_phase }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="padding: var(--space-lg) 0; display: flex; gap: var(--space-sm);">
+            <a href="{% url 'daily_input' %}" class="btn btn-primary">Get Today's Outfit</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Wardrobe</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

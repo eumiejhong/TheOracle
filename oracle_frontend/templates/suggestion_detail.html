@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load image_filters %}
+
+{% block title %}Past Outfit — The Oracle{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="container" style="max-width: 900px;">
+        <header class="dashboard-header">
+            <h3>{{ suggestion.created_at|date:"j F Y" }}</h3>
+            <h1 style="font-size: 2rem;">Past Look</h1>
+        </header>
+
+        <!-- Context if available -->
+        {% if suggestion.mood or suggestion.occasion or suggestion.weather %}
+        <div style="padding: var(--space-md) 0; border-bottom: 1px solid var(--border);">
+            <div class="context-summary">
+                {% if suggestion.mood %}
+                <span class="context-label">Mood</span>
+                <span class="context-value">{{ suggestion.mood }}</span>
+                {% endif %}
+                
+                {% if suggestion.occasion %}
+                <span class="context-label">Occasion</span>
+                <span class="context-value">{{ suggestion.occasion }}</span>
+                {% endif %}
+                
+                {% if suggestion.weather %}
+                <span class="context-label">Weather</span>
+                <span class="context-value">{{ suggestion.weather }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Oracle Suggestion -->
+        <div style="padding: var(--space-lg) 0; border-bottom: 1px solid var(--border);">
+            <h3>The Oracle Said</h3>
+            <div class="oracle-response" style="border: none; padding-top: var(--space-sm);">
+                {{ suggestion.content|strip_markdown|linebreaks }}
+            </div>
+        </div>
+
+        <!-- Outfit Visual -->
+        {% if matched_items %}
+        <div style="padding: var(--space-lg) 0; border-bottom: 1px solid var(--border);">
+            <h3>The Look</h3>
+            <div class="outfit-visual">
+                {% for item in matched_items %}
+                <div class="outfit-visual-item">
+                    {% if item.image %}
+                        <img src="data:image/jpeg;base64,{{ item.image|b64encode }}" alt="{{ item.name }}">
+                    {% else %}
+                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--bg-secondary);">
+                            <span style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);">{{ item.category }}</span>
+                        </div>
+                    {% endif %}
+                    <span class="outfit-visual-item-label">{{ item.name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Rating -->
+        <div style="padding: var(--space-lg) 0; border-bottom: 1px solid var(--border);">
+            <h3>Your Rating</h3>
+            <div id="feedback-section" style="margin-top: var(--space-sm);">
+                {% if feedback %}
+                    <div id="feedback-result">
+                        <span style="display: inline-block; padding: 0.5rem 1rem; background: var(--bg-secondary); font-size: 0.9rem;">
+                            {% if feedback.rating == 'loved' %}
+                                Loved it ♥
+                            {% elif feedback.rating == 'meh' %}
+                                Neutral
+                            {% elif feedback.rating == 'dislike' %}
+                                Not for me
+                            {% else %}
+                                {{ feedback.rating }}
+                            {% endif %}
+                        </span>
+                        {% if feedback.comment %}
+                        <p style="margin-top: var(--space-sm); color: var(--text-secondary); font-style: italic;">
+                            "{{ feedback.comment }}"
+                        </p>
+                        {% endif %}
+                        <button type="button" id="change-rating-btn" style="margin-top: var(--space-sm); font-size: 0.75rem; color: var(--text-muted); background: none; border: none; cursor: pointer; text-decoration: underline;">Change rating</button>
+                    </div>
+                {% endif %}
+                <div id="feedback-buttons" style="display: {% if feedback %}none{% else %}flex{% endif %}; gap: var(--space-sm); flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary rating-btn" data-rating="loved">Loved it</button>
+                    <button type="button" class="btn btn-secondary rating-btn" data-rating="meh">Neutral</button>
+                    <button type="button" class="btn btn-secondary rating-btn" data-rating="dislike">Not for me</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div style="padding: var(--space-lg) 0; display: flex; gap: var(--space-sm);">
+            <a href="{% url 'daily_input' %}" class="btn btn-primary">New Outfit</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Wardrobe</a>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCookie(name) {
+    const cookieStr = document.cookie;
+    const cookies = cookieStr ? cookieStr.split("; ") : [];
+    for (let cookie of cookies) {
+        if (cookie.startsWith(name + "=")) {
+            return decodeURIComponent(cookie.split("=")[1]);
+        }
+    }
+    return null;
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const ratingButtons = document.querySelectorAll('.rating-btn');
+    const feedbackButtons = document.getElementById('feedback-buttons');
+    const feedbackResult = document.getElementById('feedback-result');
+    const changeRatingBtn = document.getElementById('change-rating-btn');
+    
+    // Change rating button
+    if (changeRatingBtn) {
+        changeRatingBtn.addEventListener('click', function() {
+            feedbackResult.style.display = 'none';
+            feedbackButtons.style.display = 'flex';
+        });
+    }
+    
+    // Rating buttons
+    ratingButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const rating = this.dataset.rating;
+            const formData = new FormData();
+            formData.append('rating', rating);
+            
+            fetch("{% url 'submit_feedback' suggestion.id %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": getCookie("csrftoken"),
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    feedbackButtons.style.display = 'none';
+                    
+                    // Create or update result display
+                    if (!feedbackResult) {
+                        const newResult = document.createElement('div');
+                        newResult.id = 'feedback-result';
+                        document.getElementById('feedback-section').prepend(newResult);
+                    }
+                    
+                    const resultEl = document.getElementById('feedback-result') || feedbackResult;
+                    resultEl.innerHTML = `
+                        <span style="display: inline-block; padding: 0.5rem 1rem; background: var(--bg-secondary); font-size: 0.9rem;">
+                            ${data.rating_display}
+                        </span>
+                        <button type="button" id="change-rating-btn" style="margin-top: var(--space-sm); display: block; font-size: 0.75rem; color: var(--text-muted); background: none; border: none; cursor: pointer; text-decoration: underline;">Change rating</button>
+                    `;
+                    resultEl.style.display = 'block';
+                    
+                    // Re-attach change rating listener
+                    document.getElementById('change-rating-btn').addEventListener('click', function() {
+                        resultEl.style.display = 'none';
+                        feedbackButtons.style.display = 'flex';
+                    });
+                }
+            })
+            .catch(err => {
+                console.error('Error submitting feedback:', err);
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

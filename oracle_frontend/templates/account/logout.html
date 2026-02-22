@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Exit — The Oracle{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="container" style="max-width: 450px;">
+        <header style="text-align: center; padding: var(--space-xl) 0;">
+            <h3>Leaving</h3>
+            <h1 style="font-size: 3rem;">Exit</h1>
+        </header>
+
+        <div style="text-align: center;">
+            <p style="color: var(--text-muted); margin-bottom: var(--space-lg);">Are you sure you want to sign out?</p>
+            
+            <form method="post" action="{% url 'account_logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">Sign Out</button>
+            </form>
+            
+            <p style="margin-top: var(--space-lg);">
+                <a href="{% url 'dashboard' %}" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);">← Return to Wardrobe</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

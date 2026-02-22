@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Enter — The Oracle{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="container" style="max-width: 450px;">
+        <header style="text-align: center; padding: var(--space-xl) 0;">
+            <h3>Welcome Back</h3>
+            <h1 style="font-size: 3rem;">Enter</h1>
+        </header>
+
+        {% if form.errors %}
+        <div style="padding: var(--space-md); background: var(--bg-secondary); margin-bottom: var(--space-lg); text-align: center;">
+            <p style="color: var(--text-secondary);">Please check your credentials.</p>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'account_login' %}">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" name="login" class="form-input" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-input" required>
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: center; gap: var(--space-xs);">
+                <input type="checkbox" name="remember" id="remember">
+                <label for="remember" style="font-size: 0.875rem; color: var(--text-muted);">Remember me</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+        </form>
+
+        <div style="text-align: center; padding: var(--space-lg) 0;">
+            <p style="color: var(--text-muted); font-size: 0.875rem;">
+                New here? <a href="{% url 'account_signup' %}" style="color: var(--text-primary);">Create an account</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

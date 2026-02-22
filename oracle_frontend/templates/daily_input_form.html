@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Today — The Oracle{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="container" style="max-width: 700px;">
+        <header class="dashboard-header">
+            <h3>Daily Session</h3>
+            <h1 style="font-size: 2.5rem;">What does today ask of you?</h1>
+        </header>
+
+        <form method="post" enctype="multipart/form-data" style="padding: var(--space-lg) 0;">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label">Mood</label>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: var(--space-xs);">How do you want to feel today?</p>
+                {{ form.mood_today }}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Occasion</label>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: var(--space-xs);">What's the context?</p>
+                {{ form.occasion }}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Weather</label>
+                {{ form.weather }}
+            </div>
+
+            <div style="border-top: 1px solid var(--border); padding-top: var(--space-lg); margin-top: var(--space-lg);">
+                <div class="form-group">
+                    <label class="form-label">Style a New Piece?</label>
+                    <div style="display: flex; gap: var(--space-md); margin-top: var(--space-xs);">
+                        {{ form.add_new_item }}
+                    </div>
+                </div>
+
+                <div id="new-item-fields" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">Item Description</label>
+                        {{ form.item_focus }}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Photo</label>
+                        {{ form.image }}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Or Select from Wardrobe</label>
+                    {{ form.wardrobe_item }}
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="guidance-btn" style="width: 100%; margin-top: var(--space-md);">
+                Receive Guidance
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="loading-overlay" style="display:none; position:fixed; inset:0; background:rgba(252,250,247,0.92); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
+    <div class="oracle-spinner"></div>
+    <p id="loading-msg" style="margin-top:1.5rem; font-family:var(--font-display); font-size:1.1rem; color:var(--text-primary);">The Oracle is thinking...</p>
+    <p style="margin-top:0.5rem; font-size:0.85rem; color:var(--text-muted);">This may take a moment.</p>
+</div>
+
+<style>
+.oracle-spinner {
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--border, #ddd);
+    border-top-color: var(--text-primary, #1a1a1a);
+    border-radius: 50%;
+    animation: oracle-spin 0.8s linear infinite;
+}
+@keyframes oracle-spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<style>
+    /* Style form inputs to match the aesthetic */
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group textarea,
+    .form-group select {
+        width: 100%;
+        padding: 1rem;
+        font-family: var(--font-body);
+        font-size: 1rem;
+        color: var(--text-primary);
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        transition: border-color 200ms ease;
+    }
+    
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--text-primary);
+    }
+    
+    .form-group input[type="radio"] {
+        margin-right: 0.5rem;
+    }
+    
+    .form-group label {
+        cursor: pointer;
+    }
+</style>
+
+<script>
+// Resize image file before upload
+function resizeImageFile(file, maxWidth = 800, maxHeight = 1000, quality = 0.8) {
+    return new Promise((resolve) => {
+        if (!file || !file.type.startsWith('image/')) {
+            resolve(null);
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                let width = img.width;
+                let height = img.height;
+                
+                // Calculate new dimensions
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+                
+                // Create canvas and draw resized image
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convert to blob
+                canvas.toBlob(function(blob) {
+                    resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = function() {
+                resolve(file);
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() {
+            resolve(file);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const radios = document.querySelectorAll("input[name='add_new_item']");
+    const newItemFields = document.getElementById("new-item-fields");
+
+    radios.forEach(radio => {
+        radio.addEventListener("change", () => {
+            if (radio.value === "yes") {
+                newItemFields.style.display = "block";
+            } else {
+                newItemFields.style.display = "none";
+            }
+        });
+    });
+    
+    // Intercept form submission to resize image
+    const form = document.querySelector('form[enctype="multipart/form-data"]');
+    if (form) {
+        form.addEventListener("submit", async function(e) {
+            const fileInput = form.querySelector('input[type="file"]');
+            const submitBtn = document.getElementById('guidance-btn');
+            const overlay = document.getElementById('loading-overlay');
+
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            overlay.style.display = 'flex';
+
+            if (fileInput && fileInput.files.length > 0) {
+                e.preventDefault();
+                
+                try {
+                    const resizedFile = await resizeImageFile(fileInput.files[0]);
+                    if (resizedFile) {
+                        const formData = new FormData(form);
+                        formData.set('image', resizedFile);
+                        
+                        const response = await fetch(form.action || window.location.href, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (response.ok) {
+                            const html = await response.text();
+                            document.open();
+                            document.write(html);
+                            document.close();
+                            history.pushState(null, '', response.url);
+                        } else {
+                            throw new Error('Request failed');
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error:', err);
+                    overlay.style.display = 'none';
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    form.submit();
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}The Oracle{% endblock %}</title>
+    
+    <!-- Fonts - EB Garamond + Inter for that editorial feel -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/oracle.css' %}">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="container nav-inner">
+            <a href="/" class="nav-logo">The Oracle</a>
+            <ul class="nav-links">
+                {% if user.is_authenticated %}
+                    <li><a href="{% url 'dashboard' %}">Wardrobe</a></li>
+                    <li><a href="{% url 'daily_input' %}">Today</a></li>
+                    <li><a href="{% url 'account_logout' %}">Exit</a></li>
+                {% else %}
+                    <li><a href="{% url 'account_login' %}">Enter</a></li>
+                    <li><a href="{% url 'account_signup' %}">Join</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>The Oracle</p>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

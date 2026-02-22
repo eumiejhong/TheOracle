@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load image_filters %}
+
+{% block title %}Wardrobe — The Oracle{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <h3>Welcome</h3>
+            <h1>{{ user_email }}</h1>
+        </header>
+
+        <!-- Quick Actions -->
+        <div style="display: flex; gap: var(--space-xs); padding: var(--space-sm) 0; border-bottom: 1px solid var(--border);">
+            <a href="{% url 'base_profile' %}" class="btn btn-secondary">Profile</a>
+            <a href="{% url 'daily_input' %}" class="btn btn-primary">Today's Outfit</a>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Left Column -->
+            <div>
+                <!-- Today's Suggestion -->
+                <div class="dashboard-section">
+                    <h3>Today's Guidance</h3>
+                    {% if today_suggestion %}
+                        <div class="oracle-response oracle-response--compact">
+                            {{ today_suggestion|linebreaks }}
+                        </div>
+                    {% else %}
+                        <p style="margin-top: var(--space-xs); color: var(--text-muted);">
+                            Share your mood to receive today's guidance.
+                        </p>
+                        <a href="{% url 'daily_input' %}" class="btn btn-primary" style="margin-top: var(--space-sm);">Begin</a>
+                    {% endif %}
+                </div>
+
+                <!-- Style Archetype -->
+                <div class="dashboard-section">
+                    <h3>Your Archetype</h3>
+                    {% if base_profile and base_profile.style_archetype %}
+                        <div class="oracle-response oracle-response--compact" style="border-top: none;">
+                            {{ base_profile.style_archetype|strip_markdown|linebreaks }}
+                        </div>
+                    {% else %}
+                        <p style="margin-top: var(--space-xs); color: var(--text-muted);">
+                            Complete your profile to discover your archetype.
+                        </p>
+                        <a href="{% url 'base_profile' %}" class="btn btn-secondary" style="margin-top: var(--space-sm);">Create Profile</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div>
+                <!-- Recent Outfits -->
+                <div class="dashboard-section">
+                    <h3>Recent Outfits</h3>
+                    {% if recent_suggestions %}
+                        <div style="margin-top: var(--space-xs);">
+                            {% for suggestion in recent_suggestions %}
+                                <a href="{% url 'suggestion_detail' suggestion.id %}" style="display: block; padding: var(--space-xs) 0; border-bottom: 1px solid var(--border); text-decoration: none;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <div>
+                                            <p style="font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.05em;">
+                                                {{ suggestion.created_at|date:"j F Y" }}
+                                            </p>
+                                            <p style="font-size: 0.9rem; color: var(--text-primary); margin-top: 0.25rem;">
+                                                {{ suggestion.content|truncatewords:12 }}
+                                            </p>
+                                        </div>
+                                        {% if suggestion.user_rating %}
+                                            <span style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem; background: var(--bg-secondary); color: var(--text-muted); white-space: nowrap;">
+                                                {% if suggestion.user_rating == 'loved' %}♥{% elif suggestion.user_rating == 'meh' %}—{% else %}✕{% endif %}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p style="margin-top: var(--space-xs); color: var(--text-muted); font-size: 0.9rem;">No outfits yet.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Add to Wardrobe -->
+                <div class="dashboard-section" style="border-bottom: none;">
+                    <h3>Add Piece</h3>
+                    <form method="post" enctype="multipart/form-data" action="" style="margin-top: var(--space-xs);">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="id_name">Name</label>
+                            <input type="text" name="name" id="id_name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="id_category">Category</label>
+                            <select name="category" id="id_category">
+                                <option value="">Select</option>
+                                <option value="Top">Top</option>
+                                <option value="Bottom">Bottom</option>
+                                <option value="Dress">Dress</option>
+                                <option value="Outerwear">Outerwear</option>
+                                <option value="Shoes">Shoes</option>
+                                <option value="Bag">Bag</option>
+                                <option value="Accessory">Accessory</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="id_image">Image</label>
+                            <input type="file" name="image" id="id_image" accept="image/*">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: var(--space-xs);">Add</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wardrobe Section -->
+        <section style="padding: var(--space-lg) 0;">
+            <h3>Wardrobe</h3>
+            <h2 style="font-size: 1.75rem; margin-top: var(--space-xs);">{{ wardrobe_items|length }} Pieces</h2>
+            
+            {% if wardrobe_items %}
+                <div class="wardrobe-grid" style="margin-top: var(--space-md);">
+                    {% for item in wardrobe_items %}
+                        <div class="wardrobe-item">
+                            {% if item.image %}
+                                <img src="data:image/jpeg;base64,{{ item.image|b64encode }}" alt="{{ item.name }}" loading="lazy">
+                            {% else %}
+                                <div class="wardrobe-item--empty">
+                                    <span>No image</span>
+                                </div>
+                            {% endif %}
+                            <div class="wardrobe-item-info">
+                                <p class="wardrobe-item-category">{{ item.category }}</p>
+                                <p class="wardrobe-item-name">{{ item.name }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div style="padding: var(--space-lg); text-align: center; border: 1px solid var(--border); margin-top: var(--space-md);">
+                    <h2 style="font-size: 1.25rem; font-weight: 400;">Empty</h2>
+                    <p style="margin-top: var(--space-xs); color: var(--text-muted); font-size: 0.9rem;">Add pieces to begin building your wardrobe.</p>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+</div>
+
+<script>
+// Resize image file before upload
+function resizeImageFile(file, maxWidth = 800, maxHeight = 1000, quality = 0.8) {
+    return new Promise((resolve) => {
+        if (!file || !file.type.startsWith('image/')) {
+            resolve(null);
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                let width = img.width;
+                let height = img.height;
+                
+                // Calculate new dimensions
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+                
+                // Create canvas and draw resized image
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convert to blob
+                canvas.toBlob(function(blob) {
+                    resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = function() {
+                resolve(file);  // Return original on error
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() {
+            resolve(file);  // Return original on error
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Intercept Add Piece form to resize image
+    const addForm = document.querySelector('form[enctype="multipart/form-data"]');
+    if (addForm) {
+        addForm.addEventListener("submit", async function(e) {
+            const fileInput = addForm.querySelector('input[type="file"]');
+            if (fileInput && fileInput.files.length > 0) {
+                e.preventDefault();
+                
+                const submitBtn = addForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Saving...';
+                submitBtn.disabled = true;
+                
+                try {
+                    const resizedFile = await resizeImageFile(fileInput.files[0]);
+                    if (resizedFile) {
+                        // Create new FormData with resized image
+                        const formData = new FormData();
+                        formData.append('csrfmiddlewaretoken', addForm.querySelector('[name=csrfmiddlewaretoken]').value);
+                        formData.append('name', addForm.querySelector('[name=name]').value);
+                        formData.append('category', addForm.querySelector('[name=category]').value);
+                        formData.append('image', resizedFile);
+                        
+                        // Submit via fetch then redirect
+                        const response = await fetch(addForm.action || window.location.href, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            throw new Error('Upload failed');
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error resizing:', err);
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    // Fall back to normal submit
+                    addForm.submit();
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

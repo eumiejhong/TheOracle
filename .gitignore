@@ -1,0 +1,33 @@
+# Environment
+.env
+venv/
+*.pyc
+__pycache__/
+
+# Database
+db.sqlite3
+
+# Media & temp uploads
+media/
+temp/
+
+# Static files (generated)
+staticfiles/
+
+# Dataset (too large for git)
+oracle_dataset/
+
+# OS files
+.DS_Store
+*.swp
+
+# IDE
+.idea/
+.vscode/
+.cursor/
+
+# Logs
+*.log
+
+# Model cache
+.cache/
