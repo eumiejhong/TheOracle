@@ -20,6 +20,7 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("dashboard/", views.dashboard_view, name="dashboard"),
     path("profile/", views.base_style_profile_view, name="base_profile"),
+    path("profile/saved/", views.profile_saved_view, name="profile_saved"),
     path("daily-input/", views.daily_style_input_view, name="daily_input"),
     path("outfit/<int:suggestion_id>/", views.suggestion_detail_view, name="suggestion_detail"),
     path("wardrobe/mark-worn/<int:item_id>/", views.mark_item_as_worn, name="mark_item_as_worn"),

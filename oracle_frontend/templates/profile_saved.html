@@ -27,15 +27,16 @@
             <h3>Your Profile</h3>
             
             <div style="margin-top: var(--space-md);">
-                <!-- Appearance -->
+                {% if profile.appearance %}
                 <div style="margin-bottom: var(--space-md);">
                     <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.5rem;">Appearance</p>
                     <p style="color: var(--text-secondary);">
                         {{ profile.appearance.skin_tone }} · {{ profile.appearance.contrast_level }} · {{ profile.appearance.undertone }}
                     </p>
                 </div>
+                {% endif %}
                 
-                <!-- Style -->
+                {% if profile.style_identity %}
                 <div style="margin-bottom: var(--space-md);">
                     <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.5rem;">Style</p>
                     <p style="color: var(--text-secondary);">
@@ -45,14 +46,16 @@
                         {% endif %}
                     </p>
                 </div>
+                {% endif %}
                 
-                <!-- Lifestyle -->
+                {% if profile.lifestyle %}
                 <div style="margin-bottom: var(--space-md);">
                     <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.5rem;">Lifestyle</p>
                     <p style="color: var(--text-secondary);">
                         {{ profile.lifestyle.dress_formality }} · {{ profile.lifestyle.climate }} · {{ profile.lifestyle.wardrobe_phase }}
                     </p>
                 </div>
+                {% endif %}
             </div>
         </div>
 

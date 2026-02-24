@@ -104,15 +104,20 @@ def base_style_profile_view(request):
                     "save_error": f"Could not save profile: {e}"
                 })
 
-            saved_profile = UserStyleProfile.objects.filter(user_id=user_email).first()
-            return render(request, "profile_saved.html", {
-                "profile": profile,
-                "archetype": saved_profile.style_archetype if saved_profile else ""
-            })
+            return redirect("profile_saved")
     else:
         form = BaseStyleProfileForm()
 
     return render(request, "base_style_profile_form.html", {"form": form})
+
+
+@login_required
+def profile_saved_view(request):
+    user_email = request.user.email
+    profile = UserStyleProfile.objects.filter(user_id=user_email).first()
+    if not profile:
+        return redirect("base_profile")
+    return render(request, "profile_saved.html", {"profile": profile})
 
 
 def mark_item_as_worn(request, item_id):
