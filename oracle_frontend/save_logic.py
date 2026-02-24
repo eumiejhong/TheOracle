@@ -18,12 +18,14 @@ def save_style_profile(profile: dict, user_id: str):
     lifestyle = profile["lifestyle"]
     style_identity = profile["style_identity"]
 
-    # Combine summary for embedding
     summary = combine_style_summary(profile)
 
-    # Embed it
-    embedding = get_bge_model().encode(summary, normalize_embeddings=True)
-    embedding_bytes = embedding.tobytes()
+    embedding_bytes = None
+    try:
+        embedding = get_bge_model().encode(summary, normalize_embeddings=True)
+        embedding_bytes = embedding.tobytes()
+    except Exception as e:
+        print(f"[PROFILE] Embedding skipped (non-critical): {e}")
 
     style_archetype = generate_style_archetype(summary, user_id)
     print("📜 Archetype response:", style_archetype)
@@ -31,7 +33,8 @@ def save_style_profile(profile: dict, user_id: str):
     existing = UserStyleProfile.objects.filter(user_id=user_id).first()
     if existing:
         existing.raw_text = summary
-        existing.embedding = embedding_bytes
+        if embedding_bytes:
+            existing.embedding = embedding_bytes
         existing.appearance = appearance
         existing.style_identity = style_identity
         existing.lifestyle = lifestyle
