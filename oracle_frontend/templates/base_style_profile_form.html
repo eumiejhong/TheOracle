@@ -64,9 +64,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="dashboard">
+<div style="height: 30vh; overflow: hidden; position: relative;">
+    <img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=1200&q=80&auto=format" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: center 40%;">
+    <div style="position: absolute; inset: 0; background: linear-gradient(transparent 50%, var(--bg-primary) 100%);"></div>
+</div>
+<div class="dashboard" style="padding-top: 0;">
     <div class="container" style="max-width: 650px;">
-        <header class="dashboard-header">
+        <header class="dashboard-header" style="border-bottom: none; padding-top: var(--space-sm);">
             <h3>Profile</h3>
             <h1 style="font-size: 2rem;">Tell me about yourself.</h1>
             <p style="color: var(--text-muted); margin-top: var(--space-xs); font-size: 0.95rem;">

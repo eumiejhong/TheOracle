@@ -3,10 +3,47 @@
 
 {% block title %}Join — The Oracle{% endblock %}
 
+{% block extra_css %}
+<style>
+.auth-split {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+.auth-image {
+    position: relative;
+    overflow: hidden;
+}
+.auth-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.auth-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+}
+.auth-inner {
+    width: 100%;
+    max-width: 400px;
+}
+@media (max-width: 768px) {
+    .auth-split { grid-template-columns: 1fr; }
+    .auth-image { height: 30vh; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="dashboard">
-    <div class="container" style="max-width: 450px;">
-        <header style="text-align: center; padding: var(--space-xl) 0;">
+<div class="auth-split" style="padding-top: 60px;">
+    <div class="auth-image">
+        <img src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=800&q=80&auto=format" alt="" loading="eager">
+    </div>
+    <div class="auth-content">
+        <div class="auth-inner">
+        <header style="text-align: center; padding-bottom: var(--space-lg);">
             <h3>Create Account</h3>
             <h1 style="font-size: 3rem;">Join</h1>
             <p style="color: var(--text-muted); margin-top: var(--space-sm);">By invitation only.</p>
@@ -61,6 +98,7 @@
             <p style="color: var(--text-muted); font-size: 0.875rem;">
                 Already have an account? <a href="{% url 'account_login' %}" style="color: var(--text-primary);">Sign in</a>
             </p>
+        </div>
         </div>
     </div>
 </div>

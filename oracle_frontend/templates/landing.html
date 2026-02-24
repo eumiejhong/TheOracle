@@ -3,40 +3,159 @@
 
 {% block title %}The Oracle{% endblock %}
 
+{% block extra_css %}
+<style>
+.hero-split {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+}
+.hero-split-content {
+    padding: var(--space-xl) var(--space-lg);
+    max-width: 550px;
+    margin-left: auto;
+}
+.hero-split-image {
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+}
+.hero-split-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.editorial-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+.editorial-strip-item {
+    position: relative;
+    aspect-ratio: 3/4;
+    overflow: hidden;
+}
+.editorial-strip-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 1.2s ease;
+}
+.editorial-strip-item:hover img {
+    transform: scale(1.03);
+}
+.editorial-strip-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--space-md);
+    background: linear-gradient(transparent 0%, rgba(26,26,26,0.7) 100%);
+    color: var(--bg-primary);
+}
+.editorial-strip-caption h2 {
+    font-size: 1.25rem;
+    color: var(--bg-primary);
+    margin-bottom: 0.5rem;
+}
+.editorial-strip-caption p {
+    font-size: 0.85rem;
+    color: rgba(250,249,247,0.8);
+    max-width: none;
+}
+.editorial-full {
+    position: relative;
+    height: 60vh;
+    overflow: hidden;
+}
+.editorial-full img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.editorial-full-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(26,26,26,0.4);
+    text-align: center;
+    padding: var(--space-md);
+}
+.editorial-full-overlay h2 {
+    color: var(--bg-primary);
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    margin-bottom: var(--space-md);
+}
+@media (max-width: 900px) {
+    .hero-split {
+        grid-template-columns: 1fr;
+    }
+    .hero-split-image {
+        height: 50vh;
+        order: -1;
+    }
+    .hero-split-content {
+        padding: var(--space-lg) var(--space-md);
+        margin: 0 auto;
+    }
+    .editorial-strip {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Hero -->
-<section class="hero">
-    <p class="hero-label animate animate-delay-1">Personal Style Intelligence</p>
-    <h1 class="animate animate-delay-2">The Oracle</h1>
-    <p class="hero-description animate animate-delay-3">
-        Understanding what to wear is understanding who you are. 
-        The Oracle reads your wardrobe like a text—and translates it into daily decisions.
-    </p>
-    <div class="animate animate-delay-3" style="display: flex; gap: var(--space-sm); margin-top: var(--space-md);">
-        <a href="{% url 'account_signup' %}" class="btn btn-primary">Begin</a>
-        <a href="{% url 'account_login' %}" class="btn btn-secondary">Sign In</a>
+<section class="hero-split">
+    <div class="hero-split-content">
+        <p class="hero-label animate animate-delay-1">Personal Style Intelligence</p>
+        <h1 class="animate animate-delay-2">The Oracle</h1>
+        <p class="hero-description animate animate-delay-3">
+            Understanding what to wear is understanding who you are. 
+            The Oracle reads your wardrobe like a text—and translates it into daily decisions.
+        </p>
+        <div class="animate animate-delay-3" style="display: flex; gap: var(--space-sm); margin-top: var(--space-md);">
+            <a href="{% url 'account_signup' %}" class="btn btn-primary">Begin</a>
+            <a href="{% url 'account_login' %}" class="btn btn-secondary">Sign In</a>
+        </div>
+    </div>
+    <div class="hero-split-image">
+        <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?w=900&q=80&auto=format" alt="" loading="eager">
     </div>
 </section>
 
-<!-- Process -->
-<section class="section">
-    <div class="container">
-        <div class="process">
-            <div class="process-step">
-                <span class="process-number">i.</span>
-                <h2>Profile</h2>
-                <p>Share your aesthetic tensions. The contradictions are what make you interesting.</p>
-            </div>
-            <div class="process-step">
-                <span class="process-number">ii.</span>
-                <h2>Wardrobe</h2>
-                <p>Upload your pieces. The Oracle sees the relationships between them.</p>
-            </div>
-            <div class="process-step">
-                <span class="process-number">iii.</span>
-                <h2>Guidance</h2>
-                <p>Each day, receive an outfit that feels correct. Not prescribed—discovered.</p>
-            </div>
+<!-- Editorial Process Strip -->
+<section class="editorial-strip">
+    <div class="editorial-strip-item">
+        <img src="https://images.unsplash.com/photo-1523779105320-d1cd346ff52b?w=600&q=80&auto=format" alt="" loading="lazy">
+        <div class="editorial-strip-caption">
+            <p style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 0.5rem; color: rgba(250,249,247,0.6);">i.</p>
+            <h2>Profile</h2>
+            <p>Share your aesthetic tensions. The contradictions are what make you interesting.</p>
+        </div>
+    </div>
+    <div class="editorial-strip-item">
+        <img src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&q=80&auto=format" alt="" loading="lazy">
+        <div class="editorial-strip-caption">
+            <p style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 0.5rem; color: rgba(250,249,247,0.6);">ii.</p>
+            <h2>Wardrobe</h2>
+            <p>Upload your pieces. The Oracle sees the relationships between them.</p>
+        </div>
+    </div>
+    <div class="editorial-strip-item">
+        <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&q=80&auto=format" alt="" loading="lazy">
+        <div class="editorial-strip-caption">
+            <p style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 0.5rem; color: rgba(250,249,247,0.6);">iii.</p>
+            <h2>Guidance</h2>
+            <p>Each day, receive an outfit that feels correct. Not prescribed—discovered.</p>
         </div>
     </div>
 </section>
@@ -77,12 +196,11 @@
 </section>
 
 <!-- Final CTA -->
-<section class="section text-center" style="padding: var(--space-xl) 0;">
-    <div class="container">
-        <h2 style="font-size: 2rem; margin-bottom: var(--space-md);">
-            Your wardrobe already knows.
-        </h2>
-        <a href="{% url 'account_signup' %}" class="btn btn-primary">Enter The Oracle</a>
+<section class="editorial-full">
+    <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1400&q=80&auto=format" alt="" loading="lazy">
+    <div class="editorial-full-overlay">
+        <h2>Your wardrobe already knows.</h2>
+        <a href="{% url 'account_signup' %}" class="btn btn-primary" style="background: var(--bg-primary); color: var(--text-primary);">Enter The Oracle</a>
     </div>
 </section>
 {% endblock %}
