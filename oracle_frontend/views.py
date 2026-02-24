@@ -134,108 +134,109 @@ def daily_style_input_view(request):
         form.fields["wardrobe_item"].choices = wardrobe_choices
 
         if form.is_valid():
-            add_new_item = form.cleaned_data.get("add_new_item") == "yes"
-            image = form.cleaned_data.get("image")
-            item_focus = form.cleaned_data.get("item_focus", "").strip()
+            # Check that the user has a style profile before proceeding
+            if not UserStyleProfile.objects.filter(user_id=user_email).exists():
+                from django.contrib import messages
+                messages.error(request, "Please create your style profile first before requesting daily guidance.")
+                return redirect("base_profile")
 
-            # Process image description
-            if image:
-                # Reset pointer before passing to the image description function
-                image.seek(0)
-                image_description = describe_image_with_gpt4v(image)
-            else:
-                image_description = {}
+            try:
+                add_new_item = form.cleaned_data.get("add_new_item") == "yes"
+                image = form.cleaned_data.get("image")
+                item_focus = form.cleaned_data.get("item_focus", "").strip()
 
-            name_hint = form.cleaned_data.get("image_name_hint", "").strip()
-            if not name_hint or name_hint.lower() == "none":
-                name_hint = item_focus or "Uploaded Item"
-            image_description["name_hint"] = name_hint
+                if image:
+                    image.seek(0)
+                    image_description = describe_image_with_gpt4v(image)
+                else:
+                    image_description = {}
 
-            selected_item_id = form.cleaned_data.get("wardrobe_item")
-            if selected_item_id:
-                selected_item = wardrobe_items.get(id=selected_item_id)
-                item_focus = selected_item.name
+                name_hint = form.cleaned_data.get("image_name_hint", "").strip()
+                if not name_hint or name_hint.lower() == "none":
+                    name_hint = item_focus or "Uploaded Item"
+                image_description["name_hint"] = name_hint
 
-            daily_context = {
-                "user_id": user_email,
-                "mood_today": form.cleaned_data["mood_today"],
-                "occasion": form.cleaned_data["occasion"],
-                "weather": form.cleaned_data["weather"],
-                "item_focus": item_focus,
-                "image_description": image_description,
-            }
+                selected_item_id = form.cleaned_data.get("wardrobe_item")
+                if selected_item_id:
+                    selected_item = wardrobe_items.get(id=selected_item_id)
+                    item_focus = selected_item.name
 
-            user_profile = UserStyleProfile.objects.filter(user_id=user_email).latest("created_at")
-            summary_text = combine_style_summary({
-                "user_id": user_profile.user_id,
-                "appearance": user_profile.appearance,
-                "style_identity": user_profile.style_identity,
-                "lifestyle": user_profile.lifestyle
-            })
-
-            outfit_suggestion = save_daily_input(
-                user_id=user_email,
-                daily_context=daily_context,
-                model_name="gpt-4o"
-            )
-
-            suggestion = StylingSuggestion.objects.create(
-                user=request.user,
-                content=outfit_suggestion
-            )
-
-            proposed_item = None
-            uploaded_item_visual = None
-            if add_new_item and image:
-                image.seek(0)
-                raw_bytes = image.read()
-                image_b64 = base64.b64encode(raw_bytes).decode("utf-8")
-
-                proposed_item = {
-                    "name": item_focus,
-                    "image_base64": image_b64,
-                }
-                uploaded_item_visual = {
-                    "name": item_focus,
-                    "image_b64": image_b64,
+                daily_context = {
+                    "user_id": user_email,
+                    "mood_today": form.cleaned_data["mood_today"],
+                    "occasion": form.cleaned_data["occasion"],
+                    "weather": form.cleaned_data["weather"],
+                    "item_focus": item_focus,
+                    "image_description": image_description,
                 }
 
-            # Match wardrobe items mentioned in the suggestion
-            matched_items = []
-            suggestion_lower = outfit_suggestion.lower() if outfit_suggestion else ""
-            seen_ids = set()
+                outfit_suggestion = save_daily_input(
+                    user_id=user_email,
+                    daily_context=daily_context,
+                    model_name="gpt-4o"
+                )
 
-            # Always include the explicitly selected wardrobe item first
-            if selected_item_id:
-                try:
-                    focus_obj = wardrobe_items.get(id=selected_item_id)
-                    matched_items.append(focus_obj)
-                    seen_ids.add(focus_obj.id)
-                except WardrobeItem.DoesNotExist:
-                    pass
+                suggestion = StylingSuggestion.objects.create(
+                    user=request.user,
+                    content=outfit_suggestion
+                )
 
-            # Then find other wardrobe items mentioned in the suggestion text
-            for item in wardrobe_items:
-                if item.id in seen_ids:
-                    continue
-                name_lower = item.name.lower()
-                words = [w for w in name_lower.split() if len(w) > 3]
-                if any(word in suggestion_lower for word in words):
-                    matched_items.append(item)
-                    seen_ids.add(item.id)
+                proposed_item = None
+                uploaded_item_visual = None
+                if add_new_item and image:
+                    image.seek(0)
+                    raw_bytes = image.read()
+                    image_b64 = base64.b64encode(raw_bytes).decode("utf-8")
 
-            return render(
-                request,
-                "daily_input_result.html",
-                {
-                    "context": daily_context,
-                    "outfit_suggestion": outfit_suggestion,
-                    "suggestion": suggestion,
-                    "matched_items": matched_items,
-                    "uploaded_item_visual": uploaded_item_visual,
-                    "proposed_item": proposed_item,
-                }
-            )
+                    proposed_item = {
+                        "name": item_focus,
+                        "image_base64": image_b64,
+                    }
+                    uploaded_item_visual = {
+                        "name": item_focus,
+                        "image_b64": image_b64,
+                    }
+
+                matched_items = []
+                suggestion_lower = outfit_suggestion.lower() if outfit_suggestion else ""
+                seen_ids = set()
+
+                if selected_item_id:
+                    try:
+                        focus_obj = wardrobe_items.get(id=selected_item_id)
+                        matched_items.append(focus_obj)
+                        seen_ids.add(focus_obj.id)
+                    except WardrobeItem.DoesNotExist:
+                        pass
+
+                for item in wardrobe_items:
+                    if item.id in seen_ids:
+                        continue
+                    name_lower = item.name.lower()
+                    words = [w for w in name_lower.split() if len(w) > 3]
+                    if any(word in suggestion_lower for word in words):
+                        matched_items.append(item)
+                        seen_ids.add(item.id)
+
+                return render(
+                    request,
+                    "daily_input_result.html",
+                    {
+                        "context": daily_context,
+                        "outfit_suggestion": outfit_suggestion,
+                        "suggestion": suggestion,
+                        "matched_items": matched_items,
+                        "uploaded_item_visual": uploaded_item_visual,
+                        "proposed_item": proposed_item,
+                    }
+                )
+
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                from django.contrib import messages
+                messages.error(request, f"Something went wrong generating your outfit: {e}")
+                return redirect("daily_input")
 
     else:
         form = DailyStyleInputForm()

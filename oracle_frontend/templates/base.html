@@ -34,6 +34,17 @@
         </div>
     </nav>
 
+    <!-- Messages -->
+    {% if messages %}
+    <div class="container" style="max-width: 700px; padding-top: var(--space-md);">
+        {% for message in messages %}
+        <div style="padding: 1rem; margin-bottom: 1rem; border: 1px solid {% if message.tags == 'error' %}#c44{% else %}var(--border){% endif %}; background: {% if message.tags == 'error' %}#fff5f5{% else %}var(--bg-secondary){% endif %}; font-family: var(--font-body); font-size: 0.95rem;">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Main Content -->
     <main>
         {% block content %}{% endblock %}
