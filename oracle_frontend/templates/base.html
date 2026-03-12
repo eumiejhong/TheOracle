@@ -60,52 +60,54 @@
 
     {% block extra_js %}{% endblock %}
 
-    <!-- Global loading indicator -->
+    <!-- Global loading overlay -->
     <style>
-        #oracle-loading-bar {
-            position: fixed; top: 0; left: 0; height: 3px;
-            background: var(--text-primary, #1a1a1a);
-            width: 0; z-index: 10000;
-            pointer-events: none; opacity: 0;
+        #oracle-loader {
+            position: fixed; inset: 0;
+            background: rgba(252, 250, 247, 0.85);
+            z-index: 10000;
+            display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1.2rem;
+            opacity: 0; pointer-events: none;
+            transition: opacity 300ms ease;
         }
-        body.oracle-navigating { cursor: wait; }
-        body.oracle-navigating * { cursor: wait !important; }
-        body.oracle-navigating main { opacity: 0.6; transition: opacity 200ms ease; }
+        #oracle-loader.active { opacity: 1; pointer-events: all; }
+        #oracle-loader .spinner {
+            width: 36px; height: 36px;
+            border: 1.5px solid rgba(26, 26, 26, 0.12);
+            border-top-color: #1a1a1a;
+            border-radius: 50%;
+            animation: oracle-spin 0.9s linear infinite;
+        }
+        #oracle-loader .loader-text {
+            font-family: 'Cormorant Garamond', 'Garamond', 'Georgia', serif;
+            font-size: 0.85rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #1a1a1a;
+            opacity: 0.7;
+        }
+        @keyframes oracle-spin { to { transform: rotate(360deg); } }
     </style>
-    <div id="oracle-loading-bar"></div>
+    <div id="oracle-loader">
+        <div class="spinner"></div>
+        <div class="loader-text">The Oracle</div>
+    </div>
     <script>
     (function() {
-        var bar = document.getElementById('oracle-loading-bar');
+        var loader = document.getElementById('oracle-loader');
         var running = false;
-        var width = 0;
-        var interval;
+        var delay;
 
         function start() {
             if (running) return;
             running = true;
-            width = 0;
-            bar.style.transition = 'none';
-            bar.style.width = '0%';
-            bar.style.opacity = '1';
-            document.body.classList.add('oracle-navigating');
-            void bar.offsetWidth;
-            interval = setInterval(function() {
-                if (width < 30) width += 3;
-                else if (width < 60) width += 1.5;
-                else if (width < 85) width += 0.4;
-                else if (width < 92) width += 0.1;
-                bar.style.transition = 'width 200ms ease';
-                bar.style.width = width + '%';
-            }, 150);
+            delay = setTimeout(function() { loader.classList.add('active'); }, 120);
         }
 
         function stop() {
-            clearInterval(interval);
             running = false;
-            bar.style.transition = 'width 200ms ease, opacity 300ms ease 200ms';
-            bar.style.width = '100%';
-            bar.style.opacity = '0';
-            document.body.classList.remove('oracle-navigating');
+            clearTimeout(delay);
+            loader.classList.remove('active');
         }
 
         document.addEventListener('click', function(e) {

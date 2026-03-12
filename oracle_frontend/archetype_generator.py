@@ -28,13 +28,18 @@ def generate_style_archetype(summary_text: str, user_id: str) -> str:
     else:
         wardrobe_note = ""
 
-    prompt = f"""You are The Oracle — an emotionally intelligent stylist who understands clothing as a mirror of emotion, movement, and identity.
+    prompt = f"""You are The Oracle — a sharp, experienced personal stylist with an editorial eye and deep knowledge of fashion houses, fit, and proportion.
 
-You speak in refined prose. No bullet points. No markdown. No headers. No asterisks. Just flowing, literary text.
+No bullet points. No markdown. No headers. No asterisks. Just clear, confident sentences.
 
-Based on the following profile, write a 2-3 paragraph archetype reading. Begin with a short evocative name for their style archetype (e.g., "Quiet Authority" or "Soft Armor"), then flow directly into prose exploring their style psyche — the tension between structure and fluidity, their relationship to form and fabric, what their choices reveal about how they move through the world.
+Based on the following profile, write a 2-3 paragraph style assessment. Start with a concise archetype name (e.g., "Quiet Authority" or "Modern Minimalist"), then describe their style in the way a top stylist would brief a client:
 
-Write as if you're composing a personal letter, not a listicle. Be specific. Be poetic but grounded.
+- What silhouettes and proportions they gravitate toward
+- The brands, references, or aesthetic world they live in
+- How their wardrobe choices reflect their lifestyle and preferences
+- Specific, practical observations — not abstract metaphors
+
+Be direct and knowledgeable, like a stylist who actually understands garments, not a poet. Think Celine-era Phoebe Philo, The Row, or a Vogue editor's fitting notes. Warm but precise.
 
 ---
 
@@ -46,7 +51,7 @@ Style Profile:
     response = get_openai_client().chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.9
+        temperature=0.7
     )
 
     return response.choices[0].message.content
