@@ -338,9 +338,10 @@ def add_from_daily_view(request):
         uploaded_file = request.FILES.get("image")
         if uploaded_file:
             raw = uploaded_file.read()
-            compressed, ext = compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
-            item = WardrobeItem(user_id=request.user.email, name=name, category=category)
-            item.image.save(f"{slugify(name)}.{ext}", ContentFile(compressed), save=True)
+            compressed, _ext = compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
+            WardrobeItem.objects.create(
+                user_id=request.user.email, name=name, category=category, image=compressed
+            )
             return JsonResponse({"message": f"'{name}' added to your wardrobe!"})
 
         image_b64 = (request.POST.get("image_b64") or "").strip()
@@ -352,9 +353,10 @@ def add_from_daily_view(request):
             except Exception:
                 return JsonResponse({"message": "Invalid image data."}, status=400)
 
-            compressed, ext = compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
-            item = WardrobeItem(user_id=request.user.email, name=name, category=category)
-            item.image.save(f"{slugify(name)}.{ext}", ContentFile(compressed), save=True)
+            compressed, _ext = compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
+            WardrobeItem.objects.create(
+                user_id=request.user.email, name=name, category=category, image=compressed
+            )
             return JsonResponse({"message": f"'{name}' added to your wardrobe!"})
 
         return JsonResponse({"message": "Missing image (upload a file or include image_b64)."}, status=400)
