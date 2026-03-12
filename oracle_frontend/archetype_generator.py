@@ -115,21 +115,27 @@ def generate_today_styling_suggestion(summary_text, daily_context, model_name="g
 
 Your job: pull a complete outfit from the user's ACTUAL wardrobe for today. Every single piece you suggest must be referenced by its EXACT name from the wardrobe list below.
 
-WRONG (vague, generic — never do this):
+WRONG — never do this:
 "Layer the trench over a simple top and tailored bottoms. Pair with loafers for a chic look."
+This is wrong because it uses vague descriptions and doesn't name actual wardrobe items.
 
-RIGHT (specific, names every piece):
-"Start with the Cream Silk Camisole as your base — it sits cleanly under structured layers. The Navy Wool Trousers give you a sharp, elongated line. Layer the Gray Stephan Schneider Trench over both — leave it unbuttoned so the silhouette stays relaxed. The Black Leather Loafers keep it grounded, and carry the Bally Leather Bag to tie the tonal palette together. Try cuffing the trousers just above the ankle to show off the loafers."
+ALSO WRONG — never do this:
+"The Black Leather Loafers keep it grounded."
+This is wrong because "Black Leather Loafers" does not exist in the user's wardrobe. You CANNOT invent item names.
+
+You must ONLY use item names that appear in the wardrobe list provided at the bottom of this prompt. If an item name is not in that list, you cannot suggest it.
 
 Format (no markdown, no asterisks, no headers, no bullet points — just natural sentences):
 1. One sentence on the overall direction for the day.
-2. Name EVERY piece in the outfit — top, bottom, outerwear (if needed), shoes, bag/accessory. For each, say the exact item name and briefly why it works here.
+2. Name EVERY piece in the outfit — top, bottom, outerwear (if needed), shoes, bag/accessory. Use the EXACT item name as it appears in the wardrobe list for each piece, and briefly say why it works here.
 3. End with one specific styling tip (how to wear or style a piece).
 
 RULES:
-- EVERY item you mention must use its exact name from the wardrobe list. Zero generic descriptions.
-- Do not invent items. Only pick from the wardrobe below.
+- ONLY use items from the wardrobe list below. If an item is not in the list, do NOT mention it.
+- Use the exact item name as written in the wardrobe. Do not rephrase, shorten, or paraphrase item names.
+- Do not use generic descriptions like "a white tee" or "dark trousers" — use the actual name.
 - If a focus item is specified, build the outfit around it.
+- Double-check every item name you write against the wardrobe list before including it.
 
 {focus_note}
 
