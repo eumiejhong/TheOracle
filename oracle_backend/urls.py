@@ -4,9 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
 from oracle_frontend import views
-import os
 
 
 def landing_page(request):
@@ -15,33 +13,7 @@ def landing_page(request):
     return render(request, "landing.html")
 
 
-def debug_static(request):
-    static_root = str(settings.STATIC_ROOT)
-    static_dirs = [str(d) for d in settings.STATICFILES_DIRS]
-    root_exists = os.path.exists(static_root)
-    css_path = os.path.join(static_root, 'css', 'oracle.css')
-    css_exists = os.path.exists(css_path)
-    files_in_root = []
-    if root_exists:
-        for dirpath, dirnames, filenames in os.walk(static_root):
-            for f in filenames:
-                files_in_root.append(os.path.relpath(os.path.join(dirpath, f), static_root))
-    source_exists = os.path.exists(os.path.join(str(settings.BASE_DIR), 'static', 'css', 'oracle.css'))
-    return JsonResponse({
-        "STATIC_ROOT": static_root,
-        "STATIC_ROOT_exists": root_exists,
-        "STATICFILES_DIRS": static_dirs,
-        "css_in_root": css_exists,
-        "source_css_exists": source_exists,
-        "files_in_staticfiles": files_in_root[:50],
-        "STATIC_URL": settings.STATIC_URL,
-        "DEBUG": settings.DEBUG,
-        "STORAGES": getattr(settings, 'STORAGES', 'not set'),
-    })
-
-
 urlpatterns = [
-    path("debug-static/", debug_static),
     path("", landing_page, name="home"),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
