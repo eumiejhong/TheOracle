@@ -208,8 +208,9 @@ document.addEventListener("DOMContentLoaded", function () {
     if (form) {
         form.addEventListener("submit", async function (e) {
             e.preventDefault();
+            e.stopPropagation();
+            if (window.oracleLoader) window.oracleLoader.stop();
             
-            // Show loading state
             document.getElementById("add-result").innerHTML = `<span style="color: var(--text-muted);">Saving...</span>`;
             
             // Get the base64 image and resize it
