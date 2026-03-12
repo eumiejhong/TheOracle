@@ -259,16 +259,18 @@ def wardrobe_upload_view(request):
         if form.is_valid():
             image_file = form.cleaned_data.get("image")
 
-            # Extract visual descriptors BEFORE saving to model
-            descriptors = describe_image_with_gpt4v(image_file)
+            try:
+                descriptors = describe_image_with_gpt4v(image_file)
+                image_file.seek(0)
+            except Exception:
+                descriptors = {}
 
-            # Save the wardrobe item
             wardrobe_item = WardrobeItem.objects.create(
                 user_id=user_id,
                 name=form.cleaned_data["name"],
                 category=form.cleaned_data["category"],
                 image=image_file,
-                visual_descriptors=descriptors  
+                visual_descriptors=descriptors
             )
 
             return redirect("dashboard")  
@@ -336,7 +338,7 @@ def add_from_daily_view(request):
     uploaded_file = request.FILES.get("image")
     if uploaded_file:
         raw = uploaded_file.read()
-        compressed, ext = _compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
+        compressed, ext = compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
         from .models import WardrobeItem
         item = WardrobeItem(user_id=request.user.email, name=name, category=category)
         item.image.save(f"{slugify(name)}.{ext}", ContentFile(compressed), save=True)
@@ -353,7 +355,7 @@ def add_from_daily_view(request):
         except Exception:
             return JsonResponse({"message": "Invalid image data."}, status=400)
 
-        compressed, ext = _compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
+        compressed, ext = compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
         from .models import WardrobeItem
         item = WardrobeItem(user_id=request.user.email, name=name, category=category)
         item.image.save(f"{slugify(name)}.{ext}", ContentFile(compressed), save=True)
