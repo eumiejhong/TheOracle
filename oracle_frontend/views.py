@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_protect
@@ -325,43 +326,43 @@ def add_from_daily_view(request):
     if request.method != 'POST':
         return JsonResponse({"message": "Only POST allowed"}, status=405)
 
-    name = (request.POST.get("item_name") or "").strip()
-    category = request.POST.get("category", "Uncategorized")
-    if not name:
-        return JsonResponse({"message": "Missing item name."}, status=400)
+    try:
+        name = (request.POST.get("item_name") or "").strip()
+        category = request.POST.get("category", "Uncategorized")
+        if not name:
+            return JsonResponse({"message": "Missing item name."}, status=400)
 
-    # Keep a safety margin under DATA_UPLOAD_MAX_MEMORY_SIZE
-    hard_limit = getattr(settings, "DATA_UPLOAD_MAX_MEMORY_SIZE", 5 * 1024 * 1024)
-    max_bytes = max(1024 * 1024, hard_limit - 128 * 1024)  # at least 1MB, minus 128KB buffer
+        hard_limit = getattr(settings, "DATA_UPLOAD_MAX_MEMORY_SIZE", 5 * 1024 * 1024)
+        max_bytes = max(1024 * 1024, hard_limit - 128 * 1024)
 
-    # --- Option 1: file uploaded via FormData (preferred; no base64 bloat) ---
-    uploaded_file = request.FILES.get("image")
-    if uploaded_file:
-        raw = uploaded_file.read()
-        compressed, ext = compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
-        from .models import WardrobeItem
-        item = WardrobeItem(user_id=request.user.email, name=name, category=category)
-        item.image.save(f"{slugify(name)}.{ext}", ContentFile(compressed), save=True)
-        return JsonResponse({"message": f"✅ '{name}' added to your wardrobe!"})
+        uploaded_file = request.FILES.get("image")
+        if uploaded_file:
+            raw = uploaded_file.read()
+            compressed, ext = compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
+            item = WardrobeItem(user_id=request.user.email, name=name, category=category)
+            item.image.save(f"{slugify(name)}.{ext}", ContentFile(compressed), save=True)
+            return JsonResponse({"message": f"'{name}' added to your wardrobe!"})
 
-    # --- Option 2: base64 fallback (works only if request size didn't exceed Django's limit) ---
-    image_b64 = (request.POST.get("image_b64") or "").strip()
-    if image_b64:
-        # Strip data URL prefix if present
-        if "," in image_b64:
-            image_b64 = image_b64.split(",", 1)[1]
-        try:
-            raw = base64.b64decode(image_b64)
-        except Exception:
-            return JsonResponse({"message": "Invalid image data."}, status=400)
+        image_b64 = (request.POST.get("image_b64") or "").strip()
+        if image_b64:
+            if "," in image_b64:
+                image_b64 = image_b64.split(",", 1)[1]
+            try:
+                raw = base64.b64decode(image_b64)
+            except Exception:
+                return JsonResponse({"message": "Invalid image data."}, status=400)
 
-        compressed, ext = compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
-        from .models import WardrobeItem
-        item = WardrobeItem(user_id=request.user.email, name=name, category=category)
-        item.image.save(f"{slugify(name)}.{ext}", ContentFile(compressed), save=True)
-        return JsonResponse({"message": f"✅ '{name}' added to your wardrobe!"})
+            compressed, ext = compress_image_to_limit(raw, max_bytes=max_bytes, max_side=1600)
+            item = WardrobeItem(user_id=request.user.email, name=name, category=category)
+            item.image.save(f"{slugify(name)}.{ext}", ContentFile(compressed), save=True)
+            return JsonResponse({"message": f"'{name}' added to your wardrobe!"})
 
-    return JsonResponse({"message": "Missing image (upload a file or include image_b64)."}, status=400)
+        return JsonResponse({"message": "Missing image (upload a file or include image_b64)."}, status=400)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"message": f"Error saving item: {str(e)}"}, status=500)
 
 
 @require_POST
