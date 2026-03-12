@@ -57,7 +57,7 @@ Style Profile:
     return response.choices[0].message.content
 
 
-def generate_today_styling_suggestion(summary_text, daily_context, model_name="ft:gpt-4o-mini-2024-07-18:personal::D23UTjXs"):
+def generate_today_styling_suggestion(summary_text, daily_context, model_name="gpt-4o-mini"):
     import json
     from openai import OpenAIError
 
@@ -113,21 +113,23 @@ def generate_today_styling_suggestion(summary_text, daily_context, model_name="f
     # ----- Final prompt -----
     prompt = f"""You are The Oracle — a sharp personal stylist with deep knowledge of fashion, fit, and proportion.
 
-Your job: pull a complete outfit from the user's actual wardrobe for today. You MUST reference items by their exact names as they appear in the wardrobe list below.
+Your job: pull a complete outfit from the user's ACTUAL wardrobe for today. Every single piece you suggest must be referenced by its EXACT name from the wardrobe list below.
 
-Format your response exactly like this (no markdown, no asterisks, no bullet points):
+WRONG (vague, generic — never do this):
+"Layer the trench over a simple top and tailored bottoms. Pair with loafers for a chic look."
 
-Start with one sentence setting the direction for the day based on their mood, occasion, and weather.
+RIGHT (specific, names every piece):
+"Start with the Cream Silk Camisole as your base — it sits cleanly under structured layers. The Navy Wool Trousers give you a sharp, elongated line. Layer the Gray Stephan Schneider Trench over both — leave it unbuttoned so the silhouette stays relaxed. The Black Leather Loafers keep it grounded, and carry the Bally Leather Bag to tie the tonal palette together. Try cuffing the trousers just above the ankle to show off the loafers."
 
-Then lay out the outfit piece by piece, using the EXACT item names from their wardrobe. For each piece, briefly say why it works in this combination. Cover: outerwear (if weather calls for it), top, bottom, shoes, and one accessory if relevant.
+Format (no markdown, no asterisks, no headers, no bullet points — just natural sentences):
+1. One sentence on the overall direction for the day.
+2. Name EVERY piece in the outfit — top, bottom, outerwear (if needed), shoes, bag/accessory. For each, say the exact item name and briefly why it works here.
+3. End with one specific styling tip (how to wear or style a piece).
 
-End with one practical styling tip — how to wear something (sleeves pushed up, shirt untucked, coat draped vs. buttoned, etc).
-
-CRITICAL RULES:
-- You MUST use the exact item names from the wardrobe list. Never say "a simple top" or "tailored bottoms" — say the actual item name.
-- Only use items that exist in the wardrobe provided below. Do not invent items.
-- If a focus item is specified, it MUST be the anchor of the outfit.
-- Be specific and practical, not poetic. Write like a stylist talking to a client, not a magazine editorial.
+RULES:
+- EVERY item you mention must use its exact name from the wardrobe list. Zero generic descriptions.
+- Do not invent items. Only pick from the wardrobe below.
+- If a focus item is specified, build the outfit around it.
 
 {focus_note}
 
