@@ -120,7 +120,7 @@ The fine-tuning targets three capabilities:
 
 ## Accessing the App
 
-Website: https://theoracle.up.railway.app/
+[Website](https://theoracle.up.railway.app/)  
 (Please reach out for the invite code)
 
 ---
