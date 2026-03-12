@@ -12,6 +12,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN python manage.py collectstatic --noinput
+RUN python manage.py collectstatic --noinput && ls -la staticfiles/css/
 
 CMD python manage.py migrate --noinput && gunicorn oracle_backend.wsgi --bind 0.0.0.0:$PORT
