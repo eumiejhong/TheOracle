@@ -59,5 +59,53 @@
     </footer>
 
     {% block extra_js %}{% endblock %}
+
+    <!-- Global loading bar -->
+    <div id="oracle-loading-bar" style="position:fixed;top:0;left:0;height:2px;background:var(--text-primary,#1a1a1a);width:0;z-index:9999;transition:none;pointer-events:none;"></div>
+    <script>
+    (function() {
+        var bar = document.getElementById('oracle-loading-bar');
+        var running = false;
+        var width = 0;
+        var interval;
+
+        function start() {
+            if (running) return;
+            running = true;
+            width = 0;
+            bar.style.transition = 'none';
+            bar.style.width = '0%';
+            bar.style.opacity = '1';
+            interval = setInterval(function() {
+                if (width < 30) width += 3;
+                else if (width < 60) width += 1.5;
+                else if (width < 85) width += 0.4;
+                else if (width < 92) width += 0.1;
+                bar.style.transition = 'width 200ms ease';
+                bar.style.width = width + '%';
+            }, 150);
+        }
+
+        document.addEventListener('click', function(e) {
+            var link = e.target.closest('a[href]');
+            if (!link) return;
+            var href = link.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript') || link.target === '_blank') return;
+            start();
+        });
+
+        document.addEventListener('submit', function() { start(); });
+
+        window.addEventListener('pageshow', function() {
+            if (running) {
+                clearInterval(interval);
+                running = false;
+                bar.style.transition = 'width 200ms ease, opacity 400ms ease 200ms';
+                bar.style.width = '100%';
+                bar.style.opacity = '0';
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
