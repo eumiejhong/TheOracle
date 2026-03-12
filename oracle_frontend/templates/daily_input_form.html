@@ -64,25 +64,6 @@
     </div>
 </div>
 
-<div id="loading-overlay" style="display:none; position:fixed; inset:0; background:rgba(252,250,247,0.92); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
-    <div class="oracle-spinner"></div>
-    <p id="loading-msg" style="margin-top:1.5rem; font-family:var(--font-display); font-size:1.1rem; color:var(--text-primary);">The Oracle is thinking...</p>
-    <p style="margin-top:0.5rem; font-size:0.85rem; color:var(--text-muted);">This may take a moment.</p>
-</div>
-
-<style>
-.oracle-spinner {
-    width: 36px;
-    height: 36px;
-    border: 2px solid var(--border, #ddd);
-    border-top-color: var(--text-primary, #1a1a1a);
-    border-radius: 50%;
-    animation: oracle-spin 0.8s linear infinite;
-}
-@keyframes oracle-spin {
-    to { transform: rotate(360deg); }
-}
-</style>
 
 <style>
     /* Style form inputs to match the aesthetic */
@@ -183,11 +164,10 @@ document.addEventListener("DOMContentLoaded", () => {
         form.addEventListener("submit", async function(e) {
             const fileInput = form.querySelector('input[type="file"]');
             const submitBtn = document.getElementById('guidance-btn');
-            const overlay = document.getElementById('loading-overlay');
 
             submitBtn.disabled = true;
             submitBtn.style.opacity = '0.5';
-            overlay.style.display = 'flex';
+            if (window.oracleLoader) window.oracleLoader.start();
 
             if (fileInput && fileInput.files.length > 0) {
                 e.preventDefault();
@@ -215,7 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 } catch (err) {
                     console.error('Error:', err);
-                    overlay.style.display = 'none';
+                    if (window.oracleLoader) window.oracleLoader.stop();
                     submitBtn.disabled = false;
                     submitBtn.style.opacity = '1';
                     form.submit();

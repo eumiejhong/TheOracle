@@ -109,6 +109,7 @@
             clearTimeout(delay);
             loader.classList.remove('active');
         }
+        window.oracleLoader = { start: start, stop: stop };
 
         document.addEventListener('click', function(e) {
             var link = e.target.closest('a[href]');
