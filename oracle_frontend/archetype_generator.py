@@ -111,21 +111,23 @@ def generate_today_styling_suggestion(summary_text, daily_context, model_name="f
     wardrobe_note = f"\nThe user's wardrobe (JSON format):\n{json.dumps(wardrobe_items, indent=2)}"
 
     # ----- Final prompt -----
-    prompt = f"""
-You are The Oracle — an emotionally intelligent stylist.
+    prompt = f"""You are The Oracle — a sharp personal stylist with deep knowledge of fashion, fit, and proportion.
 
-Based on the user's style profile and today's context, write a short styling suggestion in flowing prose. No markdown. No bullet points. No asterisks. No headers. Just natural, refined sentences.
+Your job: pull a complete outfit from the user's actual wardrobe for today. You MUST reference items by their exact names as they appear in the wardrobe list below.
 
-Structure your response as:
-1. A brief opening line about the mood/vibe of the outfit (1 sentence)
-2. The outfit itself, naming specific items naturally in prose (1-2 sentences)
-3. Optional: a closing thought on why it works (1 sentence)
+Format your response exactly like this (no markdown, no asterisks, no bullet points):
 
-Rules:
-- Include exactly one item per category, except when focus items span multiple categories
-- Prioritize items tagged with is_uploaded_focus
-- Only use items from the wardrobe provided — do not invent items
-- The focus items below MUST appear in your suggestion
+Start with one sentence setting the direction for the day based on their mood, occasion, and weather.
+
+Then lay out the outfit piece by piece, using the EXACT item names from their wardrobe. For each piece, briefly say why it works in this combination. Cover: outerwear (if weather calls for it), top, bottom, shoes, and one accessory if relevant.
+
+End with one practical styling tip — how to wear something (sleeves pushed up, shirt untucked, coat draped vs. buttoned, etc).
+
+CRITICAL RULES:
+- You MUST use the exact item names from the wardrobe list. Never say "a simple top" or "tailored bottoms" — say the actual item name.
+- Only use items that exist in the wardrobe provided below. Do not invent items.
+- If a focus item is specified, it MUST be the anchor of the outfit.
+- Be specific and practical, not poetic. Write like a stylist talking to a client, not a magazine editorial.
 
 {focus_note}
 
@@ -148,7 +150,7 @@ Weather: {daily_context.get("weather", "")}
         response = get_openai_client().chat.completions.create(
             model=model_name,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.8
+            temperature=0.65
         )
         suggestion = response.choices[0].message.content
     except OpenAIError as e:
