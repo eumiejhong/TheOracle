@@ -60,8 +60,19 @@
 
     {% block extra_js %}{% endblock %}
 
-    <!-- Global loading bar -->
-    <div id="oracle-loading-bar" style="position:fixed;top:0;left:0;height:2px;background:var(--text-primary,#1a1a1a);width:0;z-index:9999;transition:none;pointer-events:none;"></div>
+    <!-- Global loading indicator -->
+    <style>
+        #oracle-loading-bar {
+            position: fixed; top: 0; left: 0; height: 3px;
+            background: var(--text-primary, #1a1a1a);
+            width: 0; z-index: 10000;
+            pointer-events: none; opacity: 0;
+        }
+        body.oracle-navigating { cursor: wait; }
+        body.oracle-navigating * { cursor: wait !important; }
+        body.oracle-navigating main { opacity: 0.6; transition: opacity 200ms ease; }
+    </style>
+    <div id="oracle-loading-bar"></div>
     <script>
     (function() {
         var bar = document.getElementById('oracle-loading-bar');
@@ -76,6 +87,8 @@
             bar.style.transition = 'none';
             bar.style.width = '0%';
             bar.style.opacity = '1';
+            document.body.classList.add('oracle-navigating');
+            void bar.offsetWidth;
             interval = setInterval(function() {
                 if (width < 30) width += 3;
                 else if (width < 60) width += 1.5;
@@ -86,25 +99,27 @@
             }, 150);
         }
 
+        function stop() {
+            clearInterval(interval);
+            running = false;
+            bar.style.transition = 'width 200ms ease, opacity 300ms ease 200ms';
+            bar.style.width = '100%';
+            bar.style.opacity = '0';
+            document.body.classList.remove('oracle-navigating');
+        }
+
         document.addEventListener('click', function(e) {
             var link = e.target.closest('a[href]');
             if (!link) return;
             var href = link.getAttribute('href');
-            if (!href || href.startsWith('#') || href.startsWith('javascript') || link.target === '_blank') return;
+            if (!href || href === '#' || href.startsWith('#') || href.startsWith('javascript') || link.target === '_blank') return;
             start();
         });
 
         document.addEventListener('submit', function() { start(); });
 
-        window.addEventListener('pageshow', function() {
-            if (running) {
-                clearInterval(interval);
-                running = false;
-                bar.style.transition = 'width 200ms ease, opacity 400ms ease 200ms';
-                bar.style.width = '100%';
-                bar.style.opacity = '0';
-            }
-        });
+        window.addEventListener('pageshow', function() { if (running) stop(); });
+        window.addEventListener('load', function() { if (running) stop(); });
     })();
     </script>
 </body>
