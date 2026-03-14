@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load image_filters %}
+
+{% block title %}Should I Buy This? — The Oracle{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="container" style="max-width: 700px;">
+        <header class="dashboard-header">
+            <h3>Shopping Buddy</h3>
+            <h1 style="font-size: 2.5rem;">Should I buy this?</h1>
+            <p style="color: var(--text-muted); margin-top: var(--space-xs); font-size: 0.95rem;">
+                Snap a photo of something you're considering. The Oracle will tell you if it fits your style, fills a gap in your wardrobe, or if you should walk away.
+            </p>
+        </header>
+
+        <form method="post" enctype="multipart/form-data" style="padding: var(--space-lg) 0;">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label">Upload a photo</label>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: var(--space-xs);">
+                    A product photo, screenshot, or snap from the store — anything works.
+                </p>
+                <input type="file" name="image" accept="image/*" required
+                       style="width: 100%; padding: 1rem; border: 1px solid var(--border); background: var(--bg-primary); font-family: var(--font-body);">
+            </div>
+
+            <div id="image-preview" style="display: none; margin-bottom: var(--space-md);">
+                <img id="preview-img" style="width: 100%; max-height: 400px; object-fit: contain; border: 1px solid var(--border);" alt="Preview">
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="evaluate-btn" style="width: 100%; margin-top: var(--space-md);">
+                Get The Oracle's Take
+            </button>
+        </form>
+
+        {% if past_evals %}
+        <div style="border-top: 1px solid var(--border); padding-top: var(--space-lg); margin-top: var(--space-md);">
+            <h3>Recent Evaluations</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; margin-top: var(--space-md);">
+                {% for eval in past_evals %}
+                <div style="background: var(--bg-secondary); overflow: hidden;">
+                    {% if eval.item_image %}
+                    <img src="data:image/jpeg;base64,{{ eval.item_image|b64encode }}"
+                         alt="Evaluated item"
+                         style="width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block;">
+                    {% endif %}
+                    <div style="padding: 0.5rem;">
+                        <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+                            {% if eval.verdict == 'strong_buy' %}color: #2d6a4f;
+                            {% elif eval.verdict == 'skip' %}color: #c44;
+                            {% elif eval.verdict == 'redundant' %}color: var(--text-muted);
+                            {% else %}color: var(--text-secondary);{% endif %}">
+                            {{ eval.get_verdict_display }}
+                        </span>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                            {{ eval.created_at|date:"M j" }}
+                        </p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var fileInput = document.querySelector('input[name="image"]');
+    var preview = document.getElementById("image-preview");
+    var previewImg = document.getElementById("preview-img");
+
+    fileInput.addEventListener("change", function() {
+        if (this.files && this.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                preview.style.display = "block";
+            };
+            reader.readAsDataURL(this.files[0]);
+        } else {
+            preview.style.display = "none";
+        }
+    });
+
+    document.querySelector("form").addEventListener("submit", function() {
+        var btn = document.getElementById("evaluate-btn");
+        btn.disabled = true;
+        btn.style.opacity = "0.5";
+    });
+});
+</script>
+{% endblock %}

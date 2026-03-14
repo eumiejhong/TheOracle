@@ -65,6 +65,23 @@ class StylingSuggestion(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+class ShoppingEvaluation(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    item_image = models.BinaryField(null=True, blank=True)
+    item_description = models.JSONField(default=dict)
+    evaluation = models.TextField()
+    verdict = models.CharField(max_length=20, choices=[
+        ("strong_buy", "Strong Buy"),
+        ("consider", "Worth Considering"),
+        ("skip", "Skip It"),
+        ("redundant", "You Already Own This"),
+    ], default="consider")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Shopping eval for {self.user} at {self.created_at}"
+
+
 class SuggestionFeedback(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     suggestion = models.ForeignKey(StylingSuggestion, on_delete=models.CASCADE)

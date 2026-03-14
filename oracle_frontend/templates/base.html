@@ -28,6 +28,7 @@
                 {% if user.is_authenticated %}
                     <li><a href="{% url 'dashboard' %}">Wardrobe</a></li>
                     <li><a href="{% url 'daily_input' %}">Today</a></li>
+                    <li><a href="{% url 'shopping_buddy' %}">Buy or Skip</a></li>
                     <li><a href="{% url 'account_logout' %}">Exit</a></li>
                 {% else %}
                     <li><a href="{% url 'account_login' %}">Enter</a></li>

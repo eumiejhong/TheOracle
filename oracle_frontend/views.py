@@ -11,7 +11,7 @@ from django.core.files.base import ContentFile
 import os
 import base64
 
-from oracle_data.models import UserStyleProfile, DailyStyleInput, WardrobeItem
+from oracle_data.models import UserStyleProfile, DailyStyleInput, WardrobeItem, ShoppingEvaluation
 from .forms import BaseStyleProfileForm, DailyStyleInputForm, WardrobeUploadForm
 from oracle_frontend.save_logic import save_style_profile  
 from oracle_frontend.image_descriptor import describe_image_with_gpt4v
@@ -417,3 +417,117 @@ def suggestion_detail_view(request, suggestion_id):
         "feedback": feedback,
         "matched_items": matched_items,
     })
+
+
+@login_required
+def shopping_buddy_view(request):
+    import json
+    from oracle_frontend.archetype_generator import get_openai_client
+    from oracle_frontend.shared_helpers import get_serialized_wardrobe
+
+    user_email = request.user.email
+    past_evals = ShoppingEvaluation.objects.filter(user=request.user).order_by("-created_at")[:5]
+
+    if request.method != "POST":
+        return render(request, "shopping_buddy_form.html", {"past_evals": past_evals})
+
+    image_file = request.FILES.get("image")
+    if not image_file:
+        from django.contrib import messages
+        messages.error(request, "Please upload a photo of the item you're considering.")
+        return redirect("shopping_buddy")
+
+    try:
+        raw_bytes = image_file.read()
+
+        compressed, _ext = compress_image_to_limit(raw_bytes, max_bytes=1024 * 1024, max_side=1200)
+
+        image_file.seek(0)
+        item_desc = describe_image_with_gpt4v(image_file)
+
+        profile = UserStyleProfile.objects.filter(user_id=user_email).latest("created_at")
+        style_summary = combine_style_summary({
+            "appearance": profile.appearance,
+            "style_identity": profile.style_identity,
+            "lifestyle": profile.lifestyle,
+        })
+
+        wardrobe_items = get_serialized_wardrobe(user_email)
+        wardrobe_json = json.dumps(wardrobe_items, indent=2) if wardrobe_items else "No items in wardrobe yet."
+
+        wardrobe_names_by_category = {}
+        for w in wardrobe_items:
+            cat = w.get("category", "Other")
+            wardrobe_names_by_category.setdefault(cat, []).append(w["name"])
+
+        overlap_summary = "\n".join(
+            f"  {cat}: {', '.join(names)}"
+            for cat, names in wardrobe_names_by_category.items()
+        )
+
+        prompt = f"""You are The Oracle — a sharp, experienced personal stylist evaluating whether a client should buy a specific item.
+
+The client is showing you something they're considering purchasing. Based on the image analysis, their style profile, and their current wardrobe, give them an honest, practical assessment.
+
+ITEM BEING CONSIDERED:
+{json.dumps(item_desc, indent=2)}
+
+CLIENT'S STYLE PROFILE:
+{style_summary}
+
+CLIENT'S CURRENT WARDROBE BY CATEGORY:
+{overlap_summary}
+
+Respond in this exact structure (no markdown, no asterisks, no bullet points — just clear sentences):
+
+VERDICT: [one of: STRONG BUY / WORTH CONSIDERING / SKIP IT / YOU ALREADY OWN THIS]
+
+First, describe what you see — the item's category, colors, silhouette, and quality cues. Be specific.
+
+Then assess wardrobe fit: Does the client already own something similar? Name the specific items if so. If not, identify the gap this fills.
+
+Then assess style alignment: How well does this match their style profile, preferred silhouettes, and color palette? Be honest — if it clashes, say so directly.
+
+Then assess versatility: Name 2-3 specific items from their wardrobe this would pair with, using exact item names. If it wouldn't pair well with anything they own, say that.
+
+End with your stylist's take — one or two direct sentences. Be warm but honest, like a stylist who respects their client's money and closet space."""
+
+        response = get_openai_client().chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.6,
+        )
+        evaluation_text = response.choices[0].message.content
+
+        verdict = "consider"
+        eval_upper = evaluation_text.upper()
+        if "STRONG BUY" in eval_upper:
+            verdict = "strong_buy"
+        elif "SKIP IT" in eval_upper:
+            verdict = "skip"
+        elif "YOU ALREADY OWN" in eval_upper:
+            verdict = "redundant"
+
+        evaluation = ShoppingEvaluation.objects.create(
+            user=request.user,
+            item_image=compressed,
+            item_description=item_desc,
+            evaluation=evaluation_text,
+            verdict=verdict,
+        )
+
+        return render(request, "shopping_buddy_result.html", {
+            "evaluation": evaluation,
+            "item_desc": item_desc,
+        })
+
+    except UserStyleProfile.DoesNotExist:
+        from django.contrib import messages
+        messages.error(request, "Please create your style profile first so The Oracle can evaluate purchases for you.")
+        return redirect("base_profile")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        from django.contrib import messages
+        messages.error(request, f"Something went wrong: {str(e)}")
+        return redirect("shopping_buddy")

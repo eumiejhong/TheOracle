@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load image_filters %}
+
+{% block title %}The Verdict — The Oracle{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verdict-badge {
+        display: inline-block;
+        padding: 0.4rem 1rem;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        font-family: var(--font-body);
+        font-weight: 500;
+    }
+    .verdict-strong_buy { background: #e8f5e9; color: #2d6a4f; }
+    .verdict-consider { background: var(--bg-secondary); color: var(--text-secondary); }
+    .verdict-skip { background: #fff5f5; color: #c44; }
+    .verdict-redundant { background: var(--bg-secondary); color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="container" style="max-width: 800px;">
+        <header class="dashboard-header">
+            <h3>Shopping Buddy</h3>
+            <h1 style="font-size: 2.5rem;">The Verdict</h1>
+        </header>
+
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: var(--space-lg); padding: var(--space-lg) 0; align-items: start;">
+            {% if evaluation.item_image %}
+            <div>
+                <img src="data:image/jpeg;base64,{{ evaluation.item_image|b64encode }}"
+                     alt="Item under consideration"
+                     style="width: 100%; aspect-ratio: 3/4; object-fit: cover; border: 1px solid var(--border);">
+                {% if item_desc.category_guess %}
+                <p style="margin-top: 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">
+                    {{ item_desc.category_guess }}
+                </p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div>
+                <span class="verdict-badge verdict-{{ evaluation.verdict }}">
+                    {{ evaluation.get_verdict_display }}
+                </span>
+
+                <div class="oracle-response" style="border: none; padding-top: var(--space-md);">
+                    {{ evaluation.evaluation|strip_markdown|linebreaks }}
+                </div>
+            </div>
+        </div>
+
+        <div style="border-top: 1px solid var(--border); padding-top: var(--space-lg); display: flex; gap: var(--space-md); flex-wrap: wrap;">
+            <a href="{% url 'shopping_buddy' %}" class="btn btn-primary">Evaluate Another Item</a>
+            <a href="{% url 'dashboard' %}" class="btn" style="border: 1px solid var(--border); padding: 0.8rem 2rem;">Back to Wardrobe</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
