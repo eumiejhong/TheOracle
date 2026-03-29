@@ -487,11 +487,54 @@ def shopping_buddy_view(request):
             for cat, names in wardrobe_names_by_category.items()
         )
 
+        item_category = (item_desc.get("category_guess") or "").lower()
+        category_map = {
+            "coat": "Outerwear", "jacket": "Outerwear", "blazer": "Outerwear",
+            "trench": "Outerwear", "parka": "Outerwear", "vest": "Outerwear",
+            "top": "Top", "shirt": "Top", "blouse": "Top", "sweater": "Top",
+            "tee": "Top", "knit": "Top", "cardigan": "Top", "hoodie": "Top",
+            "pants": "Bottom", "trousers": "Bottom", "jeans": "Bottom",
+            "skirt": "Bottom", "shorts": "Bottom",
+            "shoes": "Shoes", "sneakers": "Shoes", "boots": "Shoes",
+            "loafers": "Shoes", "sandals": "Shoes", "heels": "Shoes",
+            "bag": "Bag", "tote": "Bag", "purse": "Bag", "clutch": "Bag",
+            "scarf": "Accessory", "hat": "Accessory", "belt": "Accessory",
+            "jewelry": "Accessory", "watch": "Accessory",
+        }
+        matched_category = None
+        for keyword, cat in category_map.items():
+            if keyword in item_category:
+                matched_category = cat
+                break
+
+        similar_items_with_images = []
+        if matched_category:
+            db_items = WardrobeItem.objects.filter(
+                user_id=user_email, category=matched_category
+            ).order_by("-is_favorite", "-added_at")[:6]
+            for db_item in db_items:
+                if db_item.image:
+                    try:
+                        img_b64 = base64.b64encode(bytes(db_item.image)).decode("utf-8")
+                        similar_items_with_images.append({
+                            "name": db_item.name,
+                            "category": db_item.category,
+                            "image_b64": img_b64,
+                        })
+                    except Exception:
+                        pass
+
+        visual_comparison_note = ""
+        if similar_items_with_images:
+            names = [s["name"] for s in similar_items_with_images]
+            visual_comparison_note = f"\n\nI'm also showing you photos of their existing {matched_category} items ({', '.join(names)}) so you can visually compare silhouette, length, color, and style. Use what you SEE in these photos to make specific comparisons — don't guess."
+
         system_prompt = f"""You are The Oracle — a sharp, honest personal stylist. You're having a conversation with someone about whether they should buy a specific item.
 
 IMPORTANT RULES:
 - Speak directly to the person using "you" and "your" — never say "the client" or "the user"
-- When comparing to wardrobe items, you can mention items by name and category, but DO NOT make up details about them (like length, fit, texture, or color) that are not explicitly listed below. You only know each item's name, category, and color. If you don't know a detail, don't state it as fact.
+- For wardrobe items where you can see photos, make specific visual comparisons (length, silhouette, texture, color)
+- For items you can't see, only reference them by name and category — don't invent details
 - Be honest — if something is a bad buy, say so clearly
 - No markdown, no asterisks, no bullet points. Just natural, direct sentences.
 - End each message with a specific question to keep the conversation going (until you give a final verdict)
@@ -502,20 +545,33 @@ THEIR STYLE PROFILE:
 THEIR CURRENT WARDROBE:
 {overlap_summary}"""
 
-        first_message = f"""Someone is showing you this item they're considering buying:
+        first_message_text = f"""Someone is showing you this item they're considering buying:
 {json.dumps(item_desc, indent=2)}
+{visual_comparison_note}
 
-Give your first impression: describe what you see (category, colors, silhouette, quality cues). Then look at their wardrobe and call out if they already own something similar — name the specific pieces. End by asking them a question, like: what's drawing you to this piece? Or: what would you wear this with?
+Give your first impression: describe what you see (category, colors, silhouette, quality cues). Then compare it visually to their similar wardrobe pieces — call out specific differences you can see (length, color, structure). End by asking them a question, like: what's drawing you to this piece? Or: what gap are you trying to fill?
 
 Keep it conversational and direct — like a friend who happens to be a stylist."""
 
+        first_content = [{"type": "text", "text": first_message_text}]
+        first_content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(compressed).decode('utf-8')}"}
+        })
+        for sim in similar_items_with_images:
+            first_content.append({"type": "text", "text": f"[Their existing item: {sim['name']}]"})
+            first_content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{sim['image_b64']}"}
+            })
+
         messages_list = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": first_message},
+            {"role": "user", "content": first_content},
         ]
 
         response = get_openai_client().chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=messages_list,
             temperature=0.65,
         )
@@ -535,10 +591,15 @@ Keep it conversational and direct — like a friend who happens to be a stylist.
             is_complete=False,
         )
 
+        session_messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": first_message_text},
+            {"role": "assistant", "content": oracle_reply},
+        ]
         request.session[f"shopping_ctx_{evaluation.id}"] = {
             "system_prompt": system_prompt,
             "item_desc": json.dumps(item_desc),
-            "messages": messages_list + [{"role": "assistant", "content": oracle_reply}],
+            "messages": session_messages,
             "turn": 1,
         }
 
@@ -595,7 +656,7 @@ def shopping_buddy_reply(request, eval_id):
 
     try:
         response = get_openai_client().chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=messages_list,
             temperature=0.6,
         )
