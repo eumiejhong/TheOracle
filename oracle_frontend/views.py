@@ -419,11 +419,29 @@ def suggestion_detail_view(request, suggestion_id):
     })
 
 
+def _ensure_shopping_table():
+    from django.db import connection
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS oracle_data_shoppingevaluation (
+                id BIGSERIAL PRIMARY KEY,
+                item_image BYTEA,
+                item_description JSONB NOT NULL DEFAULT '{}'::jsonb,
+                evaluation TEXT NOT NULL,
+                verdict VARCHAR(20) NOT NULL DEFAULT 'consider',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                user_id INTEGER NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE
+            );
+        """)
+
+
 @login_required
 def shopping_buddy_view(request):
     import json
     from oracle_frontend.archetype_generator import get_openai_client
     from oracle_frontend.shared_helpers import get_serialized_wardrobe
+
+    _ensure_shopping_table()
 
     user_email = request.user.email
 
