@@ -556,9 +556,9 @@ THEIR CURRENT WARDROBE:
 STEP 1 — Is the person WEARING the item in the photo?
 
 If YES (fitting room, mirror selfie, trying it on), your response MUST start with how it looks ON THEM:
-- How does it fit their body? Comment on shoulder placement, length relative to their proportions, whether it's pulling or draping well, if the silhouette flatters their frame
-- How does the color work with their visible skin tone and features? Their profile says: skin tone is {profile.appearance.get('skin_tone', 'unknown')}, undertone is {profile.appearance.get('undertone', 'unknown')}, contrast level is {profile.appearance.get('contrast_level', 'unknown')}. Does this color complement or wash them out?
-- Does this piece match their personal style vibe? Their style archetype is: {profile.style_identity.get('archetypes', 'unknown')}. Does this look like "them" or is it a departure?
+- FIT: Comment on shoulder placement, length relative to their proportions, whether it's pulling or draping well, if the silhouette flatters their frame. Be specific — "the shoulders are sitting about an inch too wide" not "it fits nicely."
+- COLOR: Look at their ACTUAL face, skin, and hair in the photo. Describe what you see — their complexion, their coloring. Then assess whether this garment's color brings warmth to their face, creates flattering contrast, or washes them out. DO NOT just repeat their profile data back to them. Use your own visual analysis first. Their profile says skin tone is {profile.appearance.get('skin_tone', 'unknown')} with {profile.appearance.get('undertone', 'unknown')} undertone — use this as a reference point, not a script.
+- VIBE: Look at how they carry themselves in the photo — their posture, energy, overall presence. Does this piece suit that energy? Their style archetype is {profile.style_identity.get('archetypes', 'unknown')}. Does this look like it belongs on them or feels like a costume?
 
 If NO (product photo, flat lay, hanger shot), describe the item itself: category, colors, fabric cues, silhouette.
 
