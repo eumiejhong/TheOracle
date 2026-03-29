@@ -28,6 +28,7 @@ urlpatterns = [
     path("add-from-daily/", views.add_from_daily_view, name="add_from_daily_view"),
     path("wardrobe/delete/", views.delete_wardrobe_item, name="delete_wardrobe_item"),
     path("shopping-buddy/", views.shopping_buddy_view, name="shopping_buddy"),
+    path("shopping-buddy/<int:eval_id>/reply/", views.shopping_buddy_reply, name="shopping_buddy_reply"),
 ]
 
 # Serve media files in development

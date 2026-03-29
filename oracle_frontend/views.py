@@ -427,12 +427,16 @@ def _ensure_shopping_table():
                 id BIGSERIAL PRIMARY KEY,
                 item_image BYTEA,
                 item_description JSONB NOT NULL DEFAULT '{}'::jsonb,
-                evaluation TEXT NOT NULL,
+                evaluation TEXT NOT NULL DEFAULT '',
+                conversation JSONB NOT NULL DEFAULT '[]'::jsonb,
                 verdict VARCHAR(20) NOT NULL DEFAULT 'consider',
+                is_complete BOOLEAN NOT NULL DEFAULT FALSE,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 user_id INTEGER NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE
             );
         """)
+        cursor.execute("ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS conversation JSONB NOT NULL DEFAULT '[]'::jsonb;")
+        cursor.execute("ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS is_complete BOOLEAN NOT NULL DEFAULT FALSE;")
 
 
 @login_required
@@ -446,7 +450,7 @@ def shopping_buddy_view(request):
     user_email = request.user.email
 
     try:
-        past_evals = list(ShoppingEvaluation.objects.filter(user=request.user).order_by("-created_at")[:5])
+        past_evals = list(ShoppingEvaluation.objects.filter(user=request.user, is_complete=True).order_by("-created_at")[:5])
     except Exception:
         past_evals = []
 
@@ -461,7 +465,6 @@ def shopping_buddy_view(request):
 
     try:
         raw_bytes = image_file.read()
-
         compressed, _ext = compress_image_to_limit(raw_bytes, max_bytes=1024 * 1024, max_side=1200)
 
         image_file.seek(0)
@@ -475,70 +478,71 @@ def shopping_buddy_view(request):
         })
 
         wardrobe_items = get_serialized_wardrobe(user_email)
-        wardrobe_json = json.dumps(wardrobe_items, indent=2) if wardrobe_items else "No items in wardrobe yet."
-
         wardrobe_names_by_category = {}
         for w in wardrobe_items:
             cat = w.get("category", "Other")
             wardrobe_names_by_category.setdefault(cat, []).append(w["name"])
-
         overlap_summary = "\n".join(
             f"  {cat}: {', '.join(names)}"
             for cat, names in wardrobe_names_by_category.items()
         )
 
-        prompt = f"""You are The Oracle — a sharp, experienced personal stylist evaluating whether a client should buy a specific item.
+        system_prompt = f"""You are The Oracle — a sharp, honest personal stylist. You're having a conversation with someone about whether they should buy a specific item.
 
-The client is showing you something they're considering purchasing. Based on the image analysis, their style profile, and their current wardrobe, give them an honest, practical assessment.
+IMPORTANT RULES:
+- Speak directly to the person using "you" and "your" — never say "the client" or "the user"
+- Be specific and name exact items from their wardrobe when comparing
+- Be honest — if something is a bad buy, say so clearly
+- No markdown, no asterisks, no bullet points. Just natural, direct sentences.
+- End each message with a specific question to keep the conversation going (until you give a final verdict)
 
-ITEM BEING CONSIDERED:
-{json.dumps(item_desc, indent=2)}
-
-CLIENT'S STYLE PROFILE:
+THEIR STYLE PROFILE:
 {style_summary}
 
-CLIENT'S CURRENT WARDROBE BY CATEGORY:
-{overlap_summary}
+THEIR CURRENT WARDROBE:
+{overlap_summary}"""
 
-Respond in this exact structure (no markdown, no asterisks, no bullet points — just clear sentences):
+        first_message = f"""Someone is showing you this item they're considering buying:
+{json.dumps(item_desc, indent=2)}
 
-VERDICT: [one of: STRONG BUY / WORTH CONSIDERING / SKIP IT / YOU ALREADY OWN THIS]
+Give your first impression: describe what you see (category, colors, silhouette, quality cues). Then look at their wardrobe and call out if they already own something similar — name the specific pieces. End by asking them a question, like: what's drawing you to this piece? Or: what would you wear this with?
 
-First, describe what you see — the item's category, colors, silhouette, and quality cues. Be specific.
+Keep it conversational and direct — like a friend who happens to be a stylist."""
 
-Then assess wardrobe fit: Does the client already own something similar? Name the specific items if so. If not, identify the gap this fills.
-
-Then assess style alignment: How well does this match their style profile, preferred silhouettes, and color palette? Be honest — if it clashes, say so directly.
-
-Then assess versatility: Name 2-3 specific items from their wardrobe this would pair with, using exact item names. If it wouldn't pair well with anything they own, say that.
-
-End with your stylist's take — one or two direct sentences. Be warm but honest, like a stylist who respects their client's money and closet space."""
+        messages_list = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": first_message},
+        ]
 
         response = get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.6,
+            messages=messages_list,
+            temperature=0.65,
         )
-        evaluation_text = response.choices[0].message.content
+        oracle_reply = response.choices[0].message.content
 
-        verdict = "consider"
-        eval_upper = evaluation_text.upper()
-        if "STRONG BUY" in eval_upper:
-            verdict = "strong_buy"
-        elif "SKIP IT" in eval_upper:
-            verdict = "skip"
-        elif "YOU ALREADY OWN" in eval_upper:
-            verdict = "redundant"
+        conversation = [
+            {"role": "oracle", "text": oracle_reply},
+        ]
 
         evaluation = ShoppingEvaluation.objects.create(
             user=request.user,
             item_image=compressed,
             item_description=item_desc,
-            evaluation=evaluation_text,
-            verdict=verdict,
+            evaluation="",
+            conversation=conversation,
+            verdict="consider",
+            is_complete=False,
         )
 
-        return render(request, "shopping_buddy_result.html", {
+        request.session[f"shopping_ctx_{evaluation.id}"] = {
+            "system_prompt": system_prompt,
+            "item_desc": json.dumps(item_desc),
+            "messages": messages_list + [{"role": "assistant", "content": oracle_reply}],
+            "turn": 1,
+        }
+
+        return render(request, "shopping_buddy_chat.html", {
             "evaluation": evaluation,
             "item_desc": item_desc,
         })
@@ -553,3 +557,80 @@ End with your stylist's take — one or two direct sentences. Be warm but honest
         from django.contrib import messages
         messages.error(request, f"Something went wrong: {str(e)}")
         return redirect("shopping_buddy")
+
+
+@require_POST
+@login_required
+def shopping_buddy_reply(request, eval_id):
+    import json
+    from oracle_frontend.archetype_generator import get_openai_client
+
+    _ensure_shopping_table()
+
+    try:
+        evaluation = ShoppingEvaluation.objects.get(id=eval_id, user=request.user)
+    except ShoppingEvaluation.DoesNotExist:
+        return JsonResponse({"error": "Evaluation not found."}, status=404)
+
+    if evaluation.is_complete:
+        return JsonResponse({"error": "This evaluation is already complete."}, status=400)
+
+    user_message = (request.POST.get("message") or "").strip()
+    if not user_message:
+        return JsonResponse({"error": "Please type a message."}, status=400)
+
+    ctx = request.session.get(f"shopping_ctx_{eval_id}")
+    if not ctx:
+        return JsonResponse({"error": "Session expired. Please start a new evaluation."}, status=400)
+
+    turn = ctx.get("turn", 1)
+    messages_list = ctx["messages"]
+    messages_list.append({"role": "user", "content": user_message})
+
+    if turn >= 2:
+        messages_list.append({
+            "role": "system",
+            "content": "This is the final turn. Give your definitive verdict now. Start with 'VERDICT:' followed by one of: STRONG BUY, WORTH CONSIDERING, SKIP IT, or YOU ALREADY OWN THIS. Then give your final honest assessment in 2-3 sentences — be direct about whether this is a smart purchase. Don't ask any more questions."
+        })
+
+    try:
+        response = get_openai_client().chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages_list,
+            temperature=0.6,
+        )
+        oracle_reply = response.choices[0].message.content
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to get response: {str(e)}"}, status=500)
+
+    conversation = evaluation.conversation or []
+    conversation.append({"role": "user", "text": user_message})
+    conversation.append({"role": "oracle", "text": oracle_reply})
+    evaluation.conversation = conversation
+
+    if turn >= 2:
+        evaluation.is_complete = True
+        evaluation.evaluation = oracle_reply
+        reply_upper = oracle_reply.upper()
+        if "STRONG BUY" in reply_upper:
+            evaluation.verdict = "strong_buy"
+        elif "SKIP IT" in reply_upper:
+            evaluation.verdict = "skip"
+        elif "YOU ALREADY OWN" in reply_upper:
+            evaluation.verdict = "redundant"
+        else:
+            evaluation.verdict = "consider"
+
+    evaluation.save()
+
+    messages_list.append({"role": "assistant", "content": oracle_reply})
+    ctx["messages"] = messages_list
+    ctx["turn"] = turn + 1
+    request.session[f"shopping_ctx_{eval_id}"] = ctx
+    request.session.modified = True
+
+    return JsonResponse({
+        "reply": oracle_reply,
+        "is_complete": evaluation.is_complete,
+        "verdict": evaluation.get_verdict_display() if evaluation.is_complete else None,
+    })

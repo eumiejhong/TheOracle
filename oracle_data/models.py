@@ -70,12 +70,14 @@ class ShoppingEvaluation(models.Model):
     item_image = models.BinaryField(null=True, blank=True)
     item_description = models.JSONField(default=dict)
     evaluation = models.TextField()
+    conversation = models.JSONField(default=list, blank=True)
     verdict = models.CharField(max_length=20, choices=[
         ("strong_buy", "Strong Buy"),
         ("consider", "Worth Considering"),
         ("skip", "Skip It"),
         ("redundant", "You Already Own This"),
     ], default="consider")
+    is_complete = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

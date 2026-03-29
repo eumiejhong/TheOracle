@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load image_filters %}
+
+{% block title %}Shopping Buddy — The Oracle{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+    .chat-thread {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+        padding: var(--space-md) 0;
+    }
+    .chat-msg {
+        max-width: 85%;
+        padding: 1rem 1.2rem;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    .chat-msg.oracle {
+        align-self: flex-start;
+        background: var(--bg-secondary);
+        border-left: 2px solid var(--text-primary);
+    }
+    .chat-msg.user {
+        align-self: flex-end;
+        background: var(--text-primary);
+        color: var(--bg-primary);
+    }
+    .chat-msg-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin-bottom: 0.4rem;
+        opacity: 0.6;
+    }
+    .chat-input-area {
+        display: flex;
+        gap: 0.75rem;
+        padding: var(--space-md) 0;
+        border-top: 1px solid var(--border);
+    }
+    .chat-input-area input {
+        flex: 1;
+        padding: 0.9rem 1rem;
+        font-family: var(--font-body);
+        font-size: 0.95rem;
+        border: 1px solid var(--border);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+    }
+    .chat-input-area input:focus {
+        outline: none;
+        border-color: var(--text-primary);
+    }
+    .chat-input-area button {
+        padding: 0.9rem 1.5rem;
+        font-family: var(--font-body);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        background: var(--text-primary);
+        color: var(--bg-primary);
+        border: none;
+        cursor: pointer;
+    }
+    .chat-input-area button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    .verdict-banner {
+        padding: 1.2rem;
+        text-align: center;
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+        letter-spacing: 0.08em;
+        margin-top: var(--space-md);
+    }
+    .verdict-strong_buy { background: #e8f5e9; color: #2d6a4f; }
+    .verdict-consider { background: var(--bg-secondary); color: var(--text-secondary); }
+    .verdict-skip { background: #fff5f5; color: #c44; }
+    .verdict-redundant { background: var(--bg-secondary); color: var(--text-muted); }
+    .item-preview {
+        width: 100%;
+        max-height: 300px;
+        object-fit: contain;
+        border: 1px solid var(--border);
+    }
+    .typing-indicator {
+        display: none;
+        align-self: flex-start;
+        padding: 0.8rem 1.2rem;
+        background: var(--bg-secondary);
+        border-left: 2px solid var(--text-primary);
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        font-style: italic;
+    }
+    .typing-indicator.visible { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="chat-container" style="padding-top: 80px;">
+        <header class="dashboard-header">
+            <h3>Shopping Buddy</h3>
+            <h1 style="font-size: 2rem;">Should you buy this?</h1>
+        </header>
+
+        {% if evaluation.item_image %}
+        <div style="margin-bottom: var(--space-md);">
+            <img src="data:image/jpeg;base64,{{ evaluation.item_image|b64encode }}"
+                 alt="Item under consideration" class="item-preview">
+        </div>
+        {% endif %}
+
+        <div class="chat-thread" id="chat-thread">
+            {% for msg in evaluation.conversation %}
+            <div class="chat-msg {{ msg.role }}">
+                <div class="chat-msg-label">{% if msg.role == "oracle" %}The Oracle{% else %}You{% endif %}</div>
+                {{ msg.text|linebreaks }}
+            </div>
+            {% endfor %}
+            <div class="typing-indicator" id="typing-indicator">The Oracle is thinking...</div>
+        </div>
+
+        <div id="verdict-area"></div>
+
+        <div class="chat-input-area" id="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Tell The Oracle what you're thinking..." autocomplete="off">
+            <button id="chat-send" onclick="sendReply()">Send</button>
+        </div>
+
+        <div style="padding: var(--space-md) 0;">
+            <a href="{% url 'shopping_buddy' %}" style="font-size: 0.85rem; color: var(--text-muted);">Start over with a new item</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var evalId = {{ evaluation.id }};
+var isComplete = false;
+var inputArea = document.getElementById("chat-input-area");
+var chatInput = document.getElementById("chat-input");
+var sendBtn = document.getElementById("chat-send");
+var thread = document.getElementById("chat-thread");
+var typing = document.getElementById("typing-indicator");
+
+function getCookie(name) {
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+        var c = cookies[i].trim();
+        if (c.startsWith(name + '=')) return decodeURIComponent(c.substring(name.length + 1));
+    }
+    return '';
+}
+
+function addMessage(role, text) {
+    var div = document.createElement("div");
+    div.className = "chat-msg " + role;
+    var label = document.createElement("div");
+    label.className = "chat-msg-label";
+    label.textContent = role === "oracle" ? "The Oracle" : "You";
+    div.appendChild(label);
+    var body = document.createElement("div");
+    body.innerHTML = text.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>");
+    div.appendChild(body);
+    thread.insertBefore(div, typing);
+    thread.scrollTop = thread.scrollHeight;
+}
+
+function showVerdict(verdict, verdictClass) {
+    var area = document.getElementById("verdict-area");
+    area.innerHTML = '<div class="verdict-banner verdict-' + verdictClass + '">' + verdict + '</div>' +
+        '<div style="padding-top: var(--space-md); display: flex; gap: var(--space-md); flex-wrap: wrap;">' +
+        '<a href="{% url "shopping_buddy" %}" class="btn btn-primary">Evaluate Another Item</a>' +
+        '<a href="{% url "dashboard" %}" class="btn" style="border: 1px solid var(--border); padding: 0.8rem 2rem;">Back to Wardrobe</a></div>';
+}
+
+function sendReply() {
+    if (isComplete) return;
+    var msg = chatInput.value.trim();
+    if (!msg) return;
+
+    addMessage("user", msg);
+    chatInput.value = "";
+    sendBtn.disabled = true;
+    chatInput.disabled = true;
+    typing.classList.add("visible");
+
+    var formData = new FormData();
+    formData.append("message", msg);
+
+    fetch("/shopping-buddy/" + evalId + "/reply/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        typing.classList.remove("visible");
+        if (data.error) {
+            addMessage("oracle", data.error);
+            sendBtn.disabled = false;
+            chatInput.disabled = false;
+            return;
+        }
+        addMessage("oracle", data.reply);
+        if (data.is_complete) {
+            isComplete = true;
+            inputArea.style.display = "none";
+            var verdictClass = "consider";
+            var reply = data.reply.toUpperCase();
+            if (reply.indexOf("STRONG BUY") >= 0) verdictClass = "strong_buy";
+            else if (reply.indexOf("SKIP IT") >= 0) verdictClass = "skip";
+            else if (reply.indexOf("YOU ALREADY OWN") >= 0) verdictClass = "redundant";
+            showVerdict(data.verdict, verdictClass);
+        } else {
+            sendBtn.disabled = false;
+            chatInput.disabled = false;
+            chatInput.focus();
+        }
+    })
+    .catch(function(err) {
+        typing.classList.remove("visible");
+        addMessage("oracle", "Something went wrong. Try again.");
+        sendBtn.disabled = false;
+        chatInput.disabled = false;
+    });
+}
+
+chatInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendReply();
+    }
+});
+
+chatInput.focus();
+</script>
+{% endblock %}
