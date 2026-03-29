@@ -491,7 +491,7 @@ def shopping_buddy_view(request):
 
 IMPORTANT RULES:
 - Speak directly to the person using "you" and "your" — never say "the client" or "the user"
-- Be specific and name exact items from their wardrobe when comparing
+- When comparing to wardrobe items, you can mention items by name and category, but DO NOT make up details about them (like length, fit, texture, or color) that are not explicitly listed below. You only know each item's name, category, and color. If you don't know a detail, don't state it as fact.
 - Be honest — if something is a bad buy, say so clearly
 - No markdown, no asterisks, no bullet points. Just natural, direct sentences.
 - End each message with a specific question to keep the conversation going (until you give a final verdict)
