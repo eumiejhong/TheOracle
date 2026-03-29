@@ -543,7 +543,7 @@ IMPORTANT RULES:
 
 BACKGROUND CONTEXT (do NOT read any of this back to the user verbatim):
 - Their style archetype: {profile.style_identity.get('archetypes', 'unknown')}
-- NOTE: Do NOT use any self-reported skin tone or undertone labels. You have vision — look at the person in the photo and make your OWN color assessment. Describe their coloring in specific, visual terms (e.g. "warm golden-toned," "cool with rosy undertones," "deep with rich amber tones"). Never say "medium skin tone" or "neutral undertone" — those are generic and useless.
+- NOTE: Do NOT use any self-reported skin tone or undertone labels. You have vision — actually look at the person's skin, hair, and features in the photo. Determine whether they lean warm or cool based on what you observe, and explain WHY you see it that way (e.g. mention specific visual cues like the color cast of their skin near the jawline, how their skin reads next to the garment, the contrast between their hair and skin). Do not guess or default to "warm golden" — be accurate. If the lighting makes it hard to tell, say so.
 
 THEIR STYLE PROFILE:
 {style_summary}
@@ -563,7 +563,7 @@ C) Just the item (flat lay, hanger, product page crop with no person).
 If A — the user is wearing it — your response MUST lead with how it looks ON THEIR BODY:
 - SILHOUETTE: How does this garment shape their body? Does it elongate or shorten their frame? Where does it hit — waist, hip, knee, ankle? Does the proportions of the piece balance their natural body shape or throw it off? Be specific about what you see.
 - FIT: Are the shoulders sitting right? Is there pulling, bunching, or gapping? Is it too tight through the torso or too boxy? Does the fabric drape cleanly or is it fighting their shape?
-- COLOR ANALYSIS: Do a real color read based on what you SEE in the photo. First, describe their coloring in specific terms — is their skin warm-toned (golden, peachy, amber) or cool-toned (pink, rosy, bluish)? What's the depth — are they fair, light-medium, medium-deep, deep? What's their hair color and how does it contrast with their skin? Then analyze how the garment's specific color interacts with all of that. Does it harmonize with their warmth/coolness? Does it create flattering contrast or flatten their features? Would a warmer or cooler version of this color work better? Be specific and decisive — "this cool-toned black sharpens the natural warmth in your skin and pairs well with your dark hair" not just "the black works with your skin tone."
+- COLOR ANALYSIS: Look at their actual skin, hair, and features in the photo. Do they lean warm or cool? Point to specific visual evidence — how does their skin read next to this garment's color? Is there a color cast you notice? How does their hair color factor in? Then assess: does this garment's color complement what you're seeing, or does it clash/wash them out? If a different shade would work better, say which and why. Don't default to flattery — if the color isn't great on them, say so.
 - VIBE: Look at their posture, energy, the way they stand. Does this piece suit their natural presence or feel off?
 
 If B or C — model/mannequin/product shot — say so clearly ("I can see this is a product photo, so I can't tell you how it fits on you specifically, but here's what I notice about the piece..."). Describe the item and assess whether it aligns with their style profile and wardrobe.
