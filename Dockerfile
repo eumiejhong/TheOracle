@@ -12,4 +12,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD python manage.py collectstatic --noinput && python manage.py migrate --noinput && gunicorn oracle_backend.wsgi --bind 0.0.0.0:$PORT
+RUN ls -la oracle_data/migrations/
+
+CMD sh -c "echo '--- Migration status ---' && python manage.py showmigrations oracle_data && echo '--- Running migrate ---' && python manage.py migrate --noinput --verbosity 2 && echo '--- Migrations complete ---' && python manage.py collectstatic --noinput && gunicorn oracle_backend.wsgi --bind 0.0.0.0:$PORT"
