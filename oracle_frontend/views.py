@@ -553,14 +553,19 @@ THEIR CURRENT WARDROBE:
         first_message_text = f"""Look at the attached photo very carefully. This person is considering buying this item.
 {visual_comparison_note}
 
-STEP 1 — Is the person WEARING the item in the photo?
+STEP 1 — Who is in the photo? Determine one of these scenarios:
 
-If YES (fitting room, mirror selfie, trying it on), your response MUST start with how it looks ON THEM:
-- FIT: Comment on shoulder placement, length relative to their proportions, whether it's pulling or draping well, if the silhouette flatters their frame. Be specific — "the shoulders are sitting about an inch too wide" not "it fits nicely."
-- COLOR: Look at their ACTUAL face, skin, and hair in the photo. Describe what you see — their complexion, their coloring. Then assess whether this garment's color brings warmth to their face, creates flattering contrast, or washes them out. DO NOT just repeat their profile data back to them. Use your own visual analysis first. Their profile says skin tone is {profile.appearance.get('skin_tone', 'unknown')} with {profile.appearance.get('undertone', 'unknown')} undertone — use this as a reference point, not a script.
-- VIBE: Look at how they carry themselves in the photo — their posture, energy, overall presence. Does this piece suit that energy? Their style archetype is {profile.style_identity.get('archetypes', 'unknown')}. Does this look like it belongs on them or feels like a costume?
+A) The USER is wearing the item (selfie, mirror pic, fitting room photo — a real person trying something on, not a model or mannequin).
+B) A MODEL or MANNEQUIN is wearing the item (e-commerce product shot, editorial photo, stock image). In this case treat it like a product photo — you cannot assess fit or color on the actual user.
+C) Just the item (flat lay, hanger, product page crop with no person).
 
-If NO (product photo, flat lay, hanger shot), describe the item itself: category, colors, fabric cues, silhouette.
+If A — the user is wearing it — your response MUST lead with how it looks ON THEIR BODY:
+- SILHOUETTE: How does this garment shape their body? Does it elongate or shorten their frame? Where does it hit — waist, hip, knee, ankle? Does the proportions of the piece balance their natural body shape or throw it off? Be specific about what you see.
+- FIT: Are the shoulders sitting right? Is there pulling, bunching, or gapping? Is it too tight through the torso or too boxy? Does the fabric drape cleanly or is it fighting their shape?
+- COLOR ON THEM: Look at their ACTUAL face, skin, and hair as you see it in the photo. Does this color bring life to their complexion, create flattering contrast, or wash them out? DO NOT just repeat their profile data. Use your eyes first. Profile reference: skin tone {profile.appearance.get('skin_tone', 'unknown')}, undertone {profile.appearance.get('undertone', 'unknown')}.
+- VIBE: Look at their posture, energy, the way they stand. Does this piece suit their natural presence? Their style archetype is {profile.style_identity.get('archetypes', 'unknown')}. Does this look like it belongs on them or feels off?
+
+If B or C — model/mannequin/product shot — say so clearly ("I can see this is a product photo, so I can't tell you how it fits on you specifically, but here's what I notice about the piece..."). Describe the item and assess whether it aligns with their style profile and wardrobe.
 
 STEP 2 — Compare to their wardrobe. Do they already own something that fills this same role? Name specific pieces.
 
