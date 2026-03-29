@@ -541,11 +541,9 @@ IMPORTANT RULES:
 - No markdown, no asterisks, no bullet points. Just natural, direct sentences.
 - End each message with a specific question to keep the conversation going (until you give a final verdict)
 
-BACKGROUND CONTEXT (do NOT read this back to the user — use it to inform your analysis):
-- Their skin tone: {profile.appearance.get('skin_tone', 'unknown')}
-- Their undertone: {profile.appearance.get('undertone', 'unknown')}
-- Their contrast level: {profile.appearance.get('contrast_level', 'unknown')}
+BACKGROUND CONTEXT (do NOT read any of this back to the user verbatim):
 - Their style archetype: {profile.style_identity.get('archetypes', 'unknown')}
+- NOTE: Do NOT use any self-reported skin tone or undertone labels. You have vision — look at the person in the photo and make your OWN color assessment. Describe their coloring in specific, visual terms (e.g. "warm golden-toned," "cool with rosy undertones," "deep with rich amber tones"). Never say "medium skin tone" or "neutral undertone" — those are generic and useless.
 
 THEIR STYLE PROFILE:
 {style_summary}
