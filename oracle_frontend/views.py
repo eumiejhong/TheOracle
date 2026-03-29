@@ -260,18 +260,18 @@ def wardrobe_upload_view(request):
         if form.is_valid():
             image_file = form.cleaned_data.get("image")
 
+            image_file.seek(0)
+            raw = image_file.read()
             try:
-                descriptors = describe_image_with_gpt4v(image_file)
-                image_file.seek(0)
+                compressed, _ext = compress_image_to_limit(raw, max_bytes=1024*1024, max_side=1600)
             except Exception:
-                descriptors = {}
+                compressed = raw
 
-            wardrobe_item = WardrobeItem.objects.create(
+            WardrobeItem.objects.create(
                 user_id=user_id,
                 name=form.cleaned_data["name"],
                 category=form.cleaned_data["category"],
-                image=image_file,
-                visual_descriptors=descriptors
+                image=compressed,
             )
 
             return redirect("dashboard")  
@@ -426,7 +426,11 @@ def shopping_buddy_view(request):
     from oracle_frontend.shared_helpers import get_serialized_wardrobe
 
     user_email = request.user.email
-    past_evals = ShoppingEvaluation.objects.filter(user=request.user).order_by("-created_at")[:5]
+
+    try:
+        past_evals = list(ShoppingEvaluation.objects.filter(user=request.user).order_by("-created_at")[:5])
+    except Exception:
+        past_evals = []
 
     if request.method != "POST":
         return render(request, "shopping_buddy_form.html", {"past_evals": past_evals})
