@@ -550,15 +550,23 @@ THEIR STYLE PROFILE:
 THEIR CURRENT WARDROBE:
 {overlap_summary}"""
 
-        first_message_text = f"""Someone is showing you this item they're considering buying:
-{json.dumps(item_desc, indent=2)}
+        first_message_text = f"""Look at the attached photo very carefully. This person is considering buying this item.
 {visual_comparison_note}
 
-Look at the photo carefully. If the person is wearing the item, comment on how it actually fits and looks on them — the fit, the proportions, how the color works with their skin tone and features. Be specific and honest.
+STEP 1 — Is the person WEARING the item in the photo?
 
-Then compare it to their similar wardrobe pieces — call out specific differences you can see. End by asking them a question about what's drawing them to this piece or what they'd style it with.
+If YES (fitting room, mirror selfie, trying it on), your response MUST start with how it looks ON THEM:
+- How does it fit their body? Comment on shoulder placement, length relative to their proportions, whether it's pulling or draping well, if the silhouette flatters their frame
+- How does the color work with their visible skin tone and features? Their profile says: skin tone is {profile.appearance.get('skin_tone', 'unknown')}, undertone is {profile.appearance.get('undertone', 'unknown')}, contrast level is {profile.appearance.get('contrast_level', 'unknown')}. Does this color complement or wash them out?
+- Does this piece match their personal style vibe? Their style archetype is: {profile.style_identity.get('archetypes', 'unknown')}. Does this look like "them" or is it a departure?
 
-Keep it conversational and direct — like a best friend who happens to be a stylist shopping with them."""
+If NO (product photo, flat lay, hanger shot), describe the item itself: category, colors, fabric cues, silhouette.
+
+STEP 2 — Compare to their wardrobe. Do they already own something that fills this same role? Name specific pieces.
+
+STEP 3 — End with a specific question to continue the conversation.
+
+Be conversational, direct, and personal — like a best friend who's a stylist and is right there shopping with them. DO NOT just generically describe the item. The value is in how it works for THIS specific person."""
 
         first_content = [{"type": "text", "text": first_message_text}]
         first_content.append({
