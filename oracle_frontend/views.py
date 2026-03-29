@@ -551,40 +551,36 @@ THEIR STYLE PROFILE:
 THEIR CURRENT WARDROBE:
 {overlap_summary}"""
 
-        first_message_text = f"""Look at the attached photo very carefully. This person is considering buying this item.
-{visual_comparison_note}
+        first_content = []
 
-STEP 1 — Who is in the photo? Determine one of these scenarios:
-
-A) The USER is wearing the item (selfie, mirror pic, fitting room photo — a real person trying something on, not a model or mannequin).
-B) A MODEL or MANNEQUIN is wearing the item (e-commerce product shot, editorial photo, stock image). In this case treat it like a product photo — you cannot assess fit or color on the actual user.
-C) Just the item (flat lay, hanger, product page crop with no person).
-
-If A — the user is wearing it — your response MUST lead with how it looks ON THEIR BODY:
-- SILHOUETTE: How does this garment shape their body? Does it elongate or shorten their frame? Where does it hit — waist, hip, knee, ankle? Does the proportions of the piece balance their natural body shape or throw it off? Be specific about what you see.
-- FIT: Are the shoulders sitting right? Is there pulling, bunching, or gapping? Is it too tight through the torso or too boxy? Does the fabric drape cleanly or is it fighting their shape?
-- COLOR ANALYSIS: Look at their actual skin, hair, and features in the photo. Do they lean warm or cool? Point to specific visual evidence — how does their skin read next to this garment's color? Is there a color cast you notice? How does their hair color factor in? Then assess: does this garment's color complement what you're seeing, or does it clash/wash them out? If a different shade would work better, say which and why. Don't default to flattery — if the color isn't great on them, say so.
-- VIBE: Look at their posture, energy, the way they stand. Does this piece suit their natural presence or feel off?
-
-If B or C — model/mannequin/product shot — say so clearly ("I can see this is a product photo, so I can't tell you how it fits on you specifically, but here's what I notice about the piece..."). Describe the item and assess whether it aligns with their style profile and wardrobe.
-
-STEP 2 — Compare to their wardrobe. Do they already own something that fills this same role? Name specific pieces.
-
-STEP 3 — End with a specific question to continue the conversation.
-
-Be conversational, direct, and personal — like a best friend who's a stylist and is right there shopping with them. DO NOT just generically describe the item. The value is in how it works for THIS specific person."""
-
-        first_content = [{"type": "text", "text": first_message_text}]
+        first_content.append({"type": "text", "text": "Photo of the item they're considering:"})
         first_content.append({
             "type": "image_url",
-            "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(compressed).decode('utf-8')}"}
+            "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(compressed).decode('utf-8')}", "detail": "high"}
         })
+
         for sim in similar_items_with_images:
-            first_content.append({"type": "text", "text": f"[Their existing item: {sim['name']}]"})
+            first_content.append({"type": "text", "text": f"Their existing wardrobe item — {sim['name']}:"})
             first_content.append({
                 "type": "image_url",
                 "image_url": {"url": f"data:image/jpeg;base64,{sim['image_b64']}"}
             })
+
+        first_message_text = f"""Now respond. First: is the person in the first photo actually wearing this item, or is it a product shot / model / mannequin?
+
+If they ARE wearing it, start your response by describing THEM — not the garment:
+1. What do you notice about their body type and proportions? How does this piece sit on their specific frame — where does it hit, does it balance their proportions or throw them off?
+2. Look at their face and skin closely. What's the actual color of their skin — describe it like a painter would, not with generic labels. How does their hair color interact with their skin tone? Now: does this garment's color work next to their face? Does it bring life to their complexion or does it deaden it? Point to what you're seeing — "the black next to your jaw creates X effect" — not vague claims.
+3. How's the fit? Shoulders, torso, length — what's working and what isn't?
+4. Does this look like them or does it feel like they're trying on someone else's style?
+
+If it's a product shot or model, say that and focus on the item itself + wardrobe comparison.
+
+Then: do they own anything similar? Compare to their wardrobe pieces{' (I showed you photos of their similar items above)' if similar_items_with_images else ''}.
+
+End with a question. Keep it real — like you're standing next to them in the store."""
+
+        first_content.append({"type": "text", "text": first_message_text})
 
         messages_list = [
             {"role": "system", "content": system_prompt},
