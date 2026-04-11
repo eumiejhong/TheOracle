@@ -535,6 +535,8 @@ Talk like a real person in a fitting room. No lists, no bullet points, no markdo
 
 Never use generic filler that could apply to anyone — every observation must be specific to what you see in this exact photo. No section headers, no labels, no bold text, no markdown. Don't guess height in feet/inches — describe proportions instead. Describe EXACTLY what you observe: where the shoulder seam falls relative to their actual shoulder, whether the fabric is bunching at the hip or pulling across the chest, how the neckline frames their jaw, whether their skin looks warmer or cooler right where it meets the fabric vs. further from it.
 
+If the photo limits your analysis — bad angle, arms covering the garment, too far away, posture obscuring fit — give your best assessment with what you can see, then ask them to send a follow-up photo from a better angle. Be specific about what pose or angle would help (e.g. "drop your arms so I can see the shoulder line" or "step back so I can see where the hem hits"). The user can attach photos in their replies.
+
 Their style: {profile.style_identity.get('archetypes', 'unknown')}
 {style_summary}
 
@@ -603,6 +605,7 @@ Compare to their wardrobe if relevant.{wardrobe_ref} Say buy or skip and why. As
             "item_desc": json.dumps(item_desc),
             "messages": session_messages,
             "turn": 1,
+            "photos_sent": 0,
         }
 
         return render(request, "shopping_buddy_chat.html", {
@@ -639,18 +642,44 @@ def shopping_buddy_reply(request, eval_id):
         return JsonResponse({"error": "This evaluation is already complete."}, status=400)
 
     user_message = (request.POST.get("message") or "").strip()
-    if not user_message:
-        return JsonResponse({"error": "Please type a message."}, status=400)
+    uploaded_image = request.FILES.get("image")
+
+    if not user_message and not uploaded_image:
+        return JsonResponse({"error": "Please type a message or attach a photo."}, status=400)
+
+    image_b64 = None
+    if uploaded_image:
+        try:
+            raw = uploaded_image.read()
+            compressed, _ext = compress_image_to_limit(raw, max_bytes=1024 * 1024, max_side=1200)
+            image_b64 = base64.b64encode(compressed).decode("utf-8")
+        except Exception:
+            return JsonResponse({"error": "Could not process that image. Try another."}, status=400)
 
     ctx = request.session.get(f"shopping_ctx_{eval_id}")
     if not ctx:
         return JsonResponse({"error": "Session expired. Please start a new evaluation."}, status=400)
 
     turn = ctx.get("turn", 1)
+    has_photo = ctx.get("photos_sent", 0)
+    max_turns = 3 + min(has_photo, 2)
     messages_list = ctx["messages"]
-    messages_list.append({"role": "user", "content": user_message})
 
-    if turn >= 2:
+    if image_b64:
+        user_content = []
+        if user_message:
+            user_content.append({"type": "text", "text": user_message})
+        user_content.append({"type": "text", "text": "Here's a new photo:"})
+        user_content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/jpeg;base64,{image_b64}", "detail": "high"}
+        })
+        messages_list.append({"role": "user", "content": user_content})
+        ctx["photos_sent"] = has_photo + 1
+    else:
+        messages_list.append({"role": "user", "content": user_message})
+
+    if turn >= max_turns - 1:
         messages_list.append({
             "role": "system",
             "content": "This is the final turn. Give your definitive verdict now. Start with 'VERDICT:' followed by one of: STRONG BUY, WORTH CONSIDERING, SKIP IT, or YOU ALREADY OWN THIS. Then give your final honest assessment in 2-3 sentences — be direct about whether this is a smart purchase. Don't ask any more questions."
@@ -667,11 +696,15 @@ def shopping_buddy_reply(request, eval_id):
         return JsonResponse({"error": f"Failed to get response: {str(e)}"}, status=500)
 
     conversation = evaluation.conversation or []
-    conversation.append({"role": "user", "text": user_message})
+    conv_entry = {"role": "user", "text": user_message or "(photo)"}
+    if image_b64:
+        conv_entry["image_b64"] = image_b64
+    conversation.append(conv_entry)
     conversation.append({"role": "oracle", "text": oracle_reply})
     evaluation.conversation = conversation
 
-    if turn >= 2:
+    is_final = turn >= max_turns - 1
+    if is_final:
         evaluation.is_complete = True
         evaluation.evaluation = oracle_reply
         reply_upper = oracle_reply.upper()
