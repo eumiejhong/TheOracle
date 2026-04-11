@@ -533,12 +533,7 @@ def shopping_buddy_view(request):
 
 Talk like a real person in a fitting room. No lists, no bullet points, no markdown, no asterisks. Always include a buy or skip recommendation.
 
-BANNED (never use any of these):
-- Generic phrases: "complements your features," "balanced appearance," "medium build," "medium proportions," "neutral undertone," "adds contrast," "doesn't wash you out," "works well with your skin tone," "maintains a sophisticated look," "pairs well with your coloring," "lovely warmth," "harmonious look"
-- Section headers or labels like **BODY:** or **SILHOUETTE:** or **COLORING:** — write as flowing conversation, not a structured report
-- Height guesses in feet/inches — describe proportions instead
-
-Instead of those, describe EXACTLY what you observe: where the shoulder seam falls relative to their actual shoulder, whether the fabric is bunching at the hip or pulling across the chest, how the neckline frames their jaw, whether their skin looks warmer or cooler right where it meets the fabric vs. further from it.
+Never use generic filler that could apply to anyone — every observation must be specific to what you see in this exact photo. No section headers, no labels, no bold text, no markdown. Don't guess height in feet/inches — describe proportions instead. Describe EXACTLY what you observe: where the shoulder seam falls relative to their actual shoulder, whether the fabric is bunching at the hip or pulling across the chest, how the neckline frames their jaw, whether their skin looks warmer or cooler right where it meets the fabric vs. further from it.
 
 Their style: {profile.style_identity.get('archetypes', 'unknown')}
 {style_summary}
@@ -578,7 +573,7 @@ Compare to their wardrobe if relevant.{wardrobe_ref} Say buy or skip and why. As
         ]
 
         response = get_openai_client().chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.4",
             messages=messages_list,
             temperature=0.65,
         )
@@ -663,7 +658,7 @@ def shopping_buddy_reply(request, eval_id):
 
     try:
         response = get_openai_client().chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.4",
             messages=messages_list,
             temperature=0.6,
         )
