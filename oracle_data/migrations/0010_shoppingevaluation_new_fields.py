@@ -1,4 +1,4 @@
-from django.db import migrations, models
+from django.db import migrations
 
 
 class Migration(migrations.Migration):
@@ -8,49 +8,40 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='shoppingevaluation',
-            name='conversation',
-            field=models.JSONField(blank=True, default=list),
+        migrations.RunSQL(
+            sql="ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS conversation JSONB NOT NULL DEFAULT '[]'::jsonb;",
+            reverse_sql=migrations.RunSQL.noop,
         ),
-        migrations.AddField(
-            model_name='shoppingevaluation',
-            name='is_complete',
-            field=models.BooleanField(default=False),
+        migrations.RunSQL(
+            sql="ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS is_complete BOOLEAN NOT NULL DEFAULT FALSE;",
+            reverse_sql=migrations.RunSQL.noop,
         ),
-        migrations.AddField(
-            model_name='shoppingevaluation',
-            name='price',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True),
+        migrations.RunSQL(
+            sql="ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS price NUMERIC(10,2);",
+            reverse_sql=migrations.RunSQL.noop,
         ),
-        migrations.AddField(
-            model_name='shoppingevaluation',
-            name='occasion',
-            field=models.CharField(blank=True, default='', max_length=100),
+        migrations.RunSQL(
+            sql="ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS occasion VARCHAR(100) NOT NULL DEFAULT '';",
+            reverse_sql=migrations.RunSQL.noop,
         ),
-        migrations.AddField(
-            model_name='shoppingevaluation',
-            name='product_url',
-            field=models.URLField(blank=True, default='', max_length=500),
+        migrations.RunSQL(
+            sql="ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS product_url VARCHAR(500) NOT NULL DEFAULT '';",
+            reverse_sql=migrations.RunSQL.noop,
         ),
-        migrations.AddField(
-            model_name='shoppingevaluation',
-            name='share_token',
-            field=models.CharField(blank=True, db_index=True, default='', max_length=64),
+        migrations.RunSQL(
+            sql="ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS share_token VARCHAR(64) NOT NULL DEFAULT '';",
+            reverse_sql=migrations.RunSQL.noop,
         ),
-        migrations.AddField(
-            model_name='shoppingevaluation',
-            name='saved_for_later',
-            field=models.BooleanField(default=False),
+        migrations.RunSQL(
+            sql="ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS saved_for_later BOOLEAN NOT NULL DEFAULT FALSE;",
+            reverse_sql=migrations.RunSQL.noop,
         ),
-        migrations.AddField(
-            model_name='shoppingevaluation',
-            name='saved_at',
-            field=models.DateTimeField(blank=True, null=True),
+        migrations.RunSQL(
+            sql="ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS saved_at TIMESTAMPTZ;",
+            reverse_sql=migrations.RunSQL.noop,
         ),
-        migrations.AddField(
-            model_name='shoppingevaluation',
-            name='outfit_suggestions',
-            field=models.JSONField(blank=True, default=list),
+        migrations.RunSQL(
+            sql="ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS outfit_suggestions JSONB NOT NULL DEFAULT '[]'::jsonb;",
+            reverse_sql=migrations.RunSQL.noop,
         ),
     ]
