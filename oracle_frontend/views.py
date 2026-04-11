@@ -560,11 +560,17 @@ Wardrobe: {overlap_summary}"""
 
         wardrobe_ref = ' I showed you photos of their similar pieces too — compare visually.' if similar_items_with_images else ''
 
-        first_message_text = f"""Before giving advice, first describe what you physically observe about the person in the photo — their frame (are they petite, tall, curvy, narrow-shouldered, long-torso'd?), their coloring (what does their skin actually look like — not a label but a description, like "your skin has this warm honey quality" or "you have cool pink-toned skin with high contrast against your dark hair"), and how they carry themselves.
+        first_message_text = f"""Before giving advice, first describe what you physically observe about the person in the photo:
 
-Then react to the garment on them: where exactly does it fall on their body, what's the fit doing, how does the color read against their actual skin at the neckline/face. Be specific enough that they learn something about their own proportions.{wardrobe_ref}
+BODY: Estimate their height (petite, average, tall). Note their proportions — are their legs long relative to their torso, or the opposite? Are their shoulders wider or narrower than their hips? What's their overall frame — slim, athletic, curvy? These details matter because they determine which silhouettes will work.
 
-Give your honest buy or skip take and ask one question."""
+SILHOUETTE ANALYSIS: Now look at this specific garment on their body. Where does the hem hit — and is that the right place for someone with their proportions? A coat that hits mid-calf on a petite person creates a totally different effect than on someone tall. Does this silhouette elongate them, cut them in half, or overwhelm their frame? Would a cropped, hip-length, or longer version work better for their specific body? What would a stylist alter to make this piece work better on them?
+
+COLORING: Describe their actual skin — not with labels, but as you see it. Then: how does the garment's color read right against their skin at the neckline and face?
+
+Then give your gut reaction — does this piece work for them or not? Say buy or skip and why.{wardrobe_ref}
+
+Ask one question."""
 
         first_content.append({"type": "text", "text": first_message_text})
 
