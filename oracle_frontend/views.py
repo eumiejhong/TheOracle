@@ -419,41 +419,53 @@ def suggestion_detail_view(request, suggestion_id):
     })
 
 
+_shopping_table_checked = False
+
 def _ensure_shopping_table():
-    from django.db import connection
+    global _shopping_table_checked
+    if _shopping_table_checked:
+        return
+    from django.db import connection, transaction
+
     try:
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS oracle_data_shoppingevaluation (
-                    id BIGSERIAL PRIMARY KEY,
-                    item_image BYTEA,
-                    item_description JSONB NOT NULL DEFAULT '{}'::jsonb,
-                    evaluation TEXT NOT NULL DEFAULT '',
-                    conversation JSONB NOT NULL DEFAULT '[]'::jsonb,
-                    verdict VARCHAR(20) NOT NULL DEFAULT 'consider',
-                    is_complete BOOLEAN NOT NULL DEFAULT FALSE,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    user_id INTEGER NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE
-                );
-            """)
-        for col_sql in [
-            "ADD COLUMN IF NOT EXISTS conversation JSONB NOT NULL DEFAULT '[]'::jsonb",
-            "ADD COLUMN IF NOT EXISTS is_complete BOOLEAN NOT NULL DEFAULT FALSE",
-            "ADD COLUMN IF NOT EXISTS price NUMERIC(10,2)",
-            "ADD COLUMN IF NOT EXISTS occasion VARCHAR(100) NOT NULL DEFAULT ''",
-            "ADD COLUMN IF NOT EXISTS product_url VARCHAR(500) NOT NULL DEFAULT ''",
-            "ADD COLUMN IF NOT EXISTS share_token VARCHAR(64) NOT NULL DEFAULT ''",
-            "ADD COLUMN IF NOT EXISTS saved_for_later BOOLEAN NOT NULL DEFAULT FALSE",
-            "ADD COLUMN IF NOT EXISTS saved_at TIMESTAMPTZ",
-            "ADD COLUMN IF NOT EXISTS outfit_suggestions JSONB NOT NULL DEFAULT '[]'::jsonb",
-        ]:
-            try:
-                with connection.cursor() as cursor:
-                    cursor.execute(f"ALTER TABLE oracle_data_shoppingevaluation {col_sql};")
-            except Exception:
-                pass
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS oracle_data_shoppingevaluation (
+                        id BIGSERIAL PRIMARY KEY,
+                        item_image BYTEA,
+                        item_description JSONB NOT NULL DEFAULT '{}'::jsonb,
+                        evaluation TEXT NOT NULL DEFAULT '',
+                        conversation JSONB NOT NULL DEFAULT '[]'::jsonb,
+                        verdict VARCHAR(20) NOT NULL DEFAULT 'consider',
+                        is_complete BOOLEAN NOT NULL DEFAULT FALSE,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        user_id INTEGER NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE
+                    );
+                """)
     except Exception:
         pass
+
+    cols = [
+        "ADD COLUMN IF NOT EXISTS conversation JSONB NOT NULL DEFAULT '[]'::jsonb",
+        "ADD COLUMN IF NOT EXISTS is_complete BOOLEAN NOT NULL DEFAULT FALSE",
+        "ADD COLUMN IF NOT EXISTS price NUMERIC(10,2)",
+        "ADD COLUMN IF NOT EXISTS occasion VARCHAR(100) NOT NULL DEFAULT ''",
+        "ADD COLUMN IF NOT EXISTS product_url VARCHAR(500) NOT NULL DEFAULT ''",
+        "ADD COLUMN IF NOT EXISTS share_token VARCHAR(64) NOT NULL DEFAULT ''",
+        "ADD COLUMN IF NOT EXISTS saved_for_later BOOLEAN NOT NULL DEFAULT FALSE",
+        "ADD COLUMN IF NOT EXISTS saved_at TIMESTAMPTZ",
+        "ADD COLUMN IF NOT EXISTS outfit_suggestions JSONB NOT NULL DEFAULT '[]'::jsonb",
+    ]
+    for col_sql in cols:
+        try:
+            with transaction.atomic():
+                with connection.cursor() as cursor:
+                    cursor.execute(f"ALTER TABLE oracle_data_shoppingevaluation {col_sql};")
+        except Exception:
+            pass
+
+    _shopping_table_checked = True
 
 
 @login_required
@@ -474,17 +486,16 @@ def shopping_buddy_view(request):
     if request.method != "POST":
         return render(request, "shopping_buddy_form.html", {"past_evals": past_evals})
 
-    image_file = request.FILES.get("image")
-    product_url = (request.POST.get("product_url") or "").strip()
-    price_str = (request.POST.get("price") or "").strip()
-    occasion = (request.POST.get("occasion") or "").strip()
-
-    if not image_file and not product_url:
-        from django.contrib import messages
-        messages.error(request, "Please upload a photo or paste a product URL.")
-        return redirect("shopping_buddy")
-
     try:
+        image_file = request.FILES.get("image")
+        product_url = (request.POST.get("product_url") or "").strip()
+        price_str = (request.POST.get("price") or "").strip()
+        occasion = (request.POST.get("occasion") or "").strip()
+
+        if not image_file and not product_url:
+            from django.contrib import messages
+            messages.error(request, "Please upload a photo or paste a product URL.")
+            return redirect("shopping_buddy")
         if product_url and not image_file:
             import requests as http_requests
             try:
@@ -527,8 +538,9 @@ def shopping_buddy_view(request):
         price = None
         if price_str:
             try:
-                price = round(float(price_str), 2)
-            except ValueError:
+                from decimal import Decimal, InvalidOperation
+                price = Decimal(price_str).quantize(Decimal("0.01"))
+            except (ValueError, InvalidOperation):
                 pass
 
         profile = UserStyleProfile.objects.filter(user_id=user_email).latest("created_at")
@@ -600,7 +612,7 @@ def shopping_buddy_view(request):
 
         price_note = ""
         if price:
-            price_note = f"\nPrice: ${price:.0f}. Factor this into your recommendation — is it worth it at this price point given their wardrobe and how much use they'd get from it?"
+            price_note = f"\nPrice: ${price:,.0f}. Factor this into your recommendation — is it worth it at this price point given their wardrobe and how much use they'd get from it?"
         occasion_note = ""
         if occasion:
             occasion_note = f"\nThey're considering this for: {occasion}. Check if their wardrobe already covers this occasion. If it does, say so."
@@ -702,9 +714,10 @@ Compare to their wardrobe if relevant.{wardrobe_ref} Say buy or skip and why. As
         return redirect("base_profile")
     except Exception as e:
         import traceback
-        traceback.print_exc()
+        tb_str = traceback.format_exc()
+        print(f"[SHOPPING BUDDY ERROR] {tb_str}")
         from django.contrib import messages
-        messages.error(request, f"Something went wrong: {str(e)}")
+        messages.error(request, f"Something went wrong: {type(e).__name__}: {str(e)}")
         return redirect("shopping_buddy")
 
 
