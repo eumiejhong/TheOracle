@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load image_filters %}
+
+{% block title %}Purchase Insights — The Oracle{% endblock %}
+
+{% block extra_css %}
+<style>
+    .insights-container { max-width: 800px; margin: 0 auto; }
+    .insight-card {
+        background: var(--bg-secondary);
+        padding: 1.2rem 1.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        border-left: 2px solid var(--text-primary);
+    }
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin: var(--space-lg) 0;
+    }
+    .stat-box {
+        background: var(--bg-secondary);
+        padding: 1.2rem;
+        text-align: center;
+    }
+    .stat-number {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        letter-spacing: 0.02em;
+    }
+    .stat-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--text-muted);
+        margin-top: 0.3rem;
+    }
+    .category-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+    }
+    .category-bar-fill {
+        height: 6px;
+        background: var(--text-primary);
+        flex-shrink: 0;
+    }
+    .history-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.75rem;
+        margin-top: var(--space-md);
+    }
+    .history-thumb {
+        aspect-ratio: 3/4;
+        object-fit: cover;
+        width: 100%;
+        display: block;
+        border: 1px solid var(--border);
+    }
+    .history-verdict {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 0.2rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="insights-container">
+        <header class="dashboard-header">
+            <h3>Shopping Buddy</h3>
+            <h1 style="font-size: 2.5rem;">Purchase Insights</h1>
+            <p style="color: var(--text-muted); margin-top: var(--space-xs); font-size: 0.95rem;">
+                Your shopping patterns, decoded.
+            </p>
+        </header>
+
+        <div style="display: flex; gap: var(--space-md); margin: var(--space-md) 0; font-size: 0.85rem;">
+            <a href="{% url 'shopping_buddy' %}" style="color: var(--text-secondary);">Evaluate New</a>
+            <a href="{% url 'shopping_wishlist' %}" style="color: var(--text-secondary);">Saved Items</a>
+        </div>
+
+        {% if total == 0 %}
+        <div style="padding: var(--space-xl) 0; text-align: center; color: var(--text-muted);">
+            <p>No evaluations yet. Start evaluating items to see your patterns.</p>
+            <a href="{% url 'shopping_buddy' %}" class="btn btn-primary" style="margin-top: var(--space-md);">Evaluate an Item</a>
+        </div>
+        {% else %}
+
+        <div class="stat-grid">
+            <div class="stat-box">
+                <div class="stat-number">{{ total }}</div>
+                <div class="stat-label">Items Evaluated</div>
+            </div>
+            {% for verdict, count in verdict_counts.items %}
+            <div class="stat-box">
+                <div class="stat-number">{{ count }}</div>
+                <div class="stat-label">{{ verdict }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if insights %}
+        <h3 style="margin-top: var(--space-lg);">The Oracle's Read</h3>
+        {% for insight in insights %}
+        <div class="insight-card">{{ insight }}</div>
+        {% endfor %}
+        {% endif %}
+
+        {% if category_counts %}
+        <h3 style="margin-top: var(--space-lg);">What You're Browsing</h3>
+        <div style="margin-top: var(--space-md);">
+            {% for cat, count in category_counts.items %}
+            <div class="category-bar">
+                <span style="min-width: 100px;">{{ cat }}</span>
+                <div class="category-bar-fill" style="width: {{ count }}0%;"></div>
+                <span style="color: var(--text-muted);">{{ count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if recent_evals %}
+        <h3 style="margin-top: var(--space-lg);">Recent History</h3>
+        <div class="history-grid">
+            {% for ev in recent_evals %}
+            <div>
+                {% if ev.item_image %}
+                <img src="data:image/jpeg;base64,{{ ev.item_image|b64encode }}" class="history-thumb" alt="Evaluated item">
+                {% endif %}
+                <div class="history-verdict" style="{% if ev.verdict == 'strong_buy' %}color: #2d6a4f;{% elif ev.verdict == 'skip' %}color: #c44;{% else %}color: var(--text-secondary);{% endif %}">
+                    {{ ev.get_verdict_display }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

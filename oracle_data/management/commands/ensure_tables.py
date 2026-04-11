@@ -20,12 +20,16 @@ class Command(BaseCommand):
                     user_id INTEGER NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE
                 );
             """)
-            cursor.execute("""
-                ALTER TABLE oracle_data_shoppingevaluation
-                ADD COLUMN IF NOT EXISTS conversation JSONB NOT NULL DEFAULT '[]'::jsonb;
-            """)
-            cursor.execute("""
-                ALTER TABLE oracle_data_shoppingevaluation
-                ADD COLUMN IF NOT EXISTS is_complete BOOLEAN NOT NULL DEFAULT FALSE;
-            """)
+            for col_sql in [
+                "ADD COLUMN IF NOT EXISTS conversation JSONB NOT NULL DEFAULT '[]'::jsonb",
+                "ADD COLUMN IF NOT EXISTS is_complete BOOLEAN NOT NULL DEFAULT FALSE",
+                "ADD COLUMN IF NOT EXISTS price NUMERIC(10,2)",
+                "ADD COLUMN IF NOT EXISTS occasion VARCHAR(100) NOT NULL DEFAULT ''",
+                "ADD COLUMN IF NOT EXISTS product_url VARCHAR(500) NOT NULL DEFAULT ''",
+                "ADD COLUMN IF NOT EXISTS share_token VARCHAR(64) NOT NULL DEFAULT ''",
+                "ADD COLUMN IF NOT EXISTS saved_for_later BOOLEAN NOT NULL DEFAULT FALSE",
+                "ADD COLUMN IF NOT EXISTS saved_at TIMESTAMPTZ",
+                "ADD COLUMN IF NOT EXISTS outfit_suggestions JSONB NOT NULL DEFAULT '[]'::jsonb",
+            ]:
+                cursor.execute(f"ALTER TABLE oracle_data_shoppingevaluation {col_sql};")
             self.stdout.write(self.style.SUCCESS("ensure_tables: oracle_data_shoppingevaluation OK"))

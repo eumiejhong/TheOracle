@@ -277,9 +277,46 @@ function addMessage(role, text, imageDataUrl) {
 function showVerdict(verdict, verdictClass) {
     var area = document.getElementById("verdict-area");
     area.innerHTML = '<div class="verdict-banner verdict-' + verdictClass + '">' + verdict + '</div>' +
-        '<div style="padding-top: var(--space-md); display: flex; gap: var(--space-md); flex-wrap: wrap;">' +
-        '<a href="{% url "shopping_buddy" %}" class="btn btn-primary">Evaluate Another Item</a>' +
-        '<a href="{% url "dashboard" %}" class="btn" style="border: 1px solid var(--border); padding: 0.8rem 2rem;">Back to Wardrobe</a></div>';
+        '<div style="padding-top: var(--space-md); display: flex; gap: var(--space-sm); flex-wrap: wrap;">' +
+        '<a href="{% url "shopping_buddy" %}" class="btn btn-primary">Evaluate Another</a>' +
+        '<button onclick="saveForLater()" class="btn" id="save-later-btn" style="border: 1px solid var(--border); padding: 0.8rem 1.5rem; background: var(--bg-primary); cursor: pointer; font-family: var(--font-body); font-size: 0.85rem;">Save for Later</button>' +
+        '<button onclick="shareEval()" class="btn" style="border: 1px solid var(--border); padding: 0.8rem 1.5rem; background: var(--bg-primary); cursor: pointer; font-family: var(--font-body); font-size: 0.85rem;">Share</button>' +
+        '<a href="{% url "dashboard" %}" class="btn" style="border: 1px solid var(--border); padding: 0.8rem 1.5rem;">Wardrobe</a></div>';
+}
+
+function saveForLater() {
+    fetch("/shopping-buddy/" + evalId + "/save/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var btn = document.getElementById("save-later-btn");
+        if (btn) {
+            btn.textContent = data.saved ? "Saved" : "Save for Later";
+            btn.disabled = data.saved;
+            if (data.saved) btn.style.opacity = "0.5";
+        }
+    });
+}
+
+function shareEval() {
+    fetch("/shopping-buddy/" + evalId + "/share/", {
+        method: "GET",
+        headers: { "X-CSRFToken": getCookie("csrftoken") }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.share_url) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(data.share_url).then(function() {
+                    alert("Link copied to clipboard!");
+                });
+            } else {
+                prompt("Copy this link:", data.share_url);
+            }
+        }
+    });
 }
 
 function sendReply() {

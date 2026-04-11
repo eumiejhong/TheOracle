@@ -435,8 +435,18 @@ def _ensure_shopping_table():
                 user_id INTEGER NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE
             );
         """)
-        cursor.execute("ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS conversation JSONB NOT NULL DEFAULT '[]'::jsonb;")
-        cursor.execute("ALTER TABLE oracle_data_shoppingevaluation ADD COLUMN IF NOT EXISTS is_complete BOOLEAN NOT NULL DEFAULT FALSE;")
+        for col_sql in [
+            "ADD COLUMN IF NOT EXISTS conversation JSONB NOT NULL DEFAULT '[]'::jsonb",
+            "ADD COLUMN IF NOT EXISTS is_complete BOOLEAN NOT NULL DEFAULT FALSE",
+            "ADD COLUMN IF NOT EXISTS price NUMERIC(10,2)",
+            "ADD COLUMN IF NOT EXISTS occasion VARCHAR(100) NOT NULL DEFAULT ''",
+            "ADD COLUMN IF NOT EXISTS product_url VARCHAR(500) NOT NULL DEFAULT ''",
+            "ADD COLUMN IF NOT EXISTS share_token VARCHAR(64) NOT NULL DEFAULT ''",
+            "ADD COLUMN IF NOT EXISTS saved_for_later BOOLEAN NOT NULL DEFAULT FALSE",
+            "ADD COLUMN IF NOT EXISTS saved_at TIMESTAMPTZ",
+            "ADD COLUMN IF NOT EXISTS outfit_suggestions JSONB NOT NULL DEFAULT '[]'::jsonb",
+        ]:
+            cursor.execute(f"ALTER TABLE oracle_data_shoppingevaluation {col_sql};")
 
 
 @login_required
@@ -458,17 +468,61 @@ def shopping_buddy_view(request):
         return render(request, "shopping_buddy_form.html", {"past_evals": past_evals})
 
     image_file = request.FILES.get("image")
-    if not image_file:
+    product_url = (request.POST.get("product_url") or "").strip()
+    price_str = (request.POST.get("price") or "").strip()
+    occasion = (request.POST.get("occasion") or "").strip()
+
+    if not image_file and not product_url:
         from django.contrib import messages
-        messages.error(request, "Please upload a photo of the item you're considering.")
+        messages.error(request, "Please upload a photo or paste a product URL.")
         return redirect("shopping_buddy")
 
     try:
-        raw_bytes = image_file.read()
+        if product_url and not image_file:
+            import requests as http_requests
+            try:
+                resp = http_requests.get(product_url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+                resp.raise_for_status()
+                content_type = resp.headers.get("content-type", "")
+                if "image" in content_type:
+                    raw_bytes = resp.content
+                else:
+                    import re
+                    html = resp.text[:50000]
+                    og_match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+                    if not og_match:
+                        og_match = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', html, re.IGNORECASE)
+                    if og_match:
+                        img_url = og_match.group(1)
+                        img_resp = http_requests.get(img_url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+                        img_resp.raise_for_status()
+                        raw_bytes = img_resp.content
+                    else:
+                        from django.contrib import messages
+                        messages.error(request, "Couldn't find an image at that URL. Try uploading a screenshot instead.")
+                        return redirect("shopping_buddy")
+            except Exception as e:
+                from django.contrib import messages
+                messages.error(request, f"Couldn't fetch that URL: {e}. Try uploading a screenshot instead.")
+                return redirect("shopping_buddy")
+        else:
+            raw_bytes = image_file.read()
+
         compressed, _ext = compress_image_to_limit(raw_bytes, max_bytes=1024 * 1024, max_side=1200)
 
-        image_file.seek(0)
-        item_desc = describe_image_with_gpt4v(image_file)
+        import io
+        if image_file:
+            image_file.seek(0)
+            item_desc = describe_image_with_gpt4v(image_file)
+        else:
+            item_desc = describe_image_with_gpt4v(io.BytesIO(compressed))
+
+        price = None
+        if price_str:
+            try:
+                price = round(float(price_str), 2)
+            except ValueError:
+                pass
 
         profile = UserStyleProfile.objects.filter(user_id=user_email).latest("created_at")
         style_summary = combine_style_summary({
@@ -529,6 +583,21 @@ def shopping_buddy_view(request):
             names = [s["name"] for s in similar_items_with_images]
             visual_comparison_note = f"\n\nI'm also showing you photos of their existing {matched_category} items ({', '.join(names)}) so you can visually compare silhouette, length, color, and style. Use what you SEE in these photos to make specific comparisons — don't guess."
 
+        import datetime
+        now = datetime.date.today()
+        month_name = now.strftime("%B")
+        season_map = {1: "winter", 2: "winter", 3: "spring", 4: "spring", 5: "spring",
+                      6: "summer", 7: "summer", 8: "summer", 9: "fall", 10: "fall",
+                      11: "fall", 12: "winter"}
+        current_season = season_map[now.month]
+
+        price_note = ""
+        if price:
+            price_note = f"\nPrice: ${price:.0f}. Factor this into your recommendation — is it worth it at this price point given their wardrobe and how much use they'd get from it?"
+        occasion_note = ""
+        if occasion:
+            occasion_note = f"\nThey're considering this for: {occasion}. Check if their wardrobe already covers this occasion. If it does, say so."
+
         system_prompt = f"""You are a personal stylist doing a fitting room consultation. The user has explicitly asked you to analyze how clothing looks on their specific body, coloring, and frame. This is a consensual personal styling session — detailed physical observations about fit, body proportions, and how colors interact with their skin and features are exactly what they're paying you for. Be as specific as a tailor taking measurements.
 
 Talk like a real person in a fitting room. No lists, no bullet points, no markdown, no asterisks. Always include a buy or skip recommendation.
@@ -538,6 +607,8 @@ Never use generic filler that could apply to anyone — every observation must b
 If the photo limits your analysis — bad angle, arms covering the garment, too far away, posture obscuring fit — give your best assessment with what you can see, then ask them to send a follow-up photo from a better angle. Be specific about what pose or angle would help (e.g. "drop your arms so I can see the shoulder line" or "step back so I can see where the hem hits"). The user can attach photos in their replies.
 
 You are ONLY a personal stylist. If the user asks you anything unrelated to fashion, clothing, or this styling session — coding questions, math, trivia, writing requests, anything — do not answer it. Just say something like "I'm your stylist, not a search engine — let's stay focused on whether this piece works for you." Never break character.
+
+Current month: {month_name} (season: {current_season}). If this item is seasonal and they won't be able to wear it for several months, flag that.{price_note}{occasion_note}
 
 Their style: {profile.style_identity.get('archetypes', 'unknown')}
 {style_summary}
@@ -595,6 +666,9 @@ Compare to their wardrobe if relevant.{wardrobe_ref} Say buy or skip and why. As
             conversation=conversation,
             verdict="consider",
             is_complete=False,
+            price=price,
+            occasion=occasion,
+            product_url=product_url,
         )
 
         session_messages = [
@@ -684,7 +758,7 @@ def shopping_buddy_reply(request, eval_id):
     if turn >= max_turns - 1:
         messages_list.append({
             "role": "system",
-            "content": "This is the final turn. Give your definitive verdict now. Start with 'VERDICT:' followed by one of: STRONG BUY, WORTH CONSIDERING, SKIP IT, or YOU ALREADY OWN THIS. Then give your final honest assessment in 2-3 sentences — be direct about whether this is a smart purchase. Don't ask any more questions."
+            "content": "This is the final turn. Give your definitive verdict now. Start with 'VERDICT:' followed by one of: STRONG BUY, WORTH CONSIDERING, SKIP IT, or YOU ALREADY OWN THIS. Then give your final honest assessment in 2-3 sentences — be direct about whether this is a smart purchase. Don't ask any more questions. If your verdict is STRONG BUY or WORTH CONSIDERING, end with 'STYLE WITH:' followed by 2-3 specific outfit ideas using items from their wardrobe that would work with this new piece. Use exact item names from the wardrobe."
         })
 
     try:
@@ -719,6 +793,11 @@ def shopping_buddy_reply(request, eval_id):
         else:
             evaluation.verdict = "consider"
 
+        if "STYLE WITH:" in oracle_reply.upper():
+            style_section = oracle_reply[oracle_reply.upper().index("STYLE WITH:") + len("STYLE WITH:"):]
+            outfits = [line.strip() for line in style_section.strip().split("\n") if line.strip()]
+            evaluation.outfit_suggestions = outfits
+
     evaluation.save()
 
     messages_list.append({"role": "assistant", "content": oracle_reply})
@@ -732,3 +811,119 @@ def shopping_buddy_reply(request, eval_id):
         "is_complete": evaluation.is_complete,
         "verdict": evaluation.get_verdict_display() if evaluation.is_complete else None,
     })
+
+
+@require_POST
+@login_required
+def shopping_save_for_later(request, eval_id):
+    _ensure_shopping_table()
+    try:
+        evaluation = ShoppingEvaluation.objects.get(id=eval_id, user=request.user)
+    except ShoppingEvaluation.DoesNotExist:
+        return JsonResponse({"error": "Not found."}, status=404)
+
+    evaluation.saved_for_later = not evaluation.saved_for_later
+    evaluation.saved_at = timezone.now() if evaluation.saved_for_later else None
+    evaluation.save()
+
+    return JsonResponse({
+        "saved": evaluation.saved_for_later,
+        "message": "Saved for later — revisit in 48 hours." if evaluation.saved_for_later else "Removed from saved.",
+    })
+
+
+@login_required
+def shopping_wishlist_view(request):
+    _ensure_shopping_table()
+    now = timezone.now()
+    saved_items = list(ShoppingEvaluation.objects.filter(
+        user=request.user, saved_for_later=True
+    ).order_by("-saved_at"))
+
+    for item in saved_items:
+        if item.saved_at:
+            hours_elapsed = (now - item.saved_at).total_seconds() / 3600
+            item.cooloff_complete = hours_elapsed >= 48
+            item.hours_remaining = max(0, int(48 - hours_elapsed))
+        else:
+            item.cooloff_complete = False
+            item.hours_remaining = 48
+
+    return render(request, "shopping_wishlist.html", {"saved_items": saved_items})
+
+
+@login_required
+def shopping_insights_view(request):
+    _ensure_shopping_table()
+    evaluations = list(ShoppingEvaluation.objects.filter(
+        user=request.user, is_complete=True
+    ).order_by("-created_at"))
+
+    total = len(evaluations)
+    verdict_counts = {}
+    category_counts = {}
+    monthly_counts = {}
+
+    for ev in evaluations:
+        v = ev.get_verdict_display()
+        verdict_counts[v] = verdict_counts.get(v, 0) + 1
+
+        cat = (ev.item_description or {}).get("category_guess", "Unknown")
+        category_counts[cat] = category_counts.get(cat, 0) + 1
+
+        month_key = ev.created_at.strftime("%b %Y")
+        monthly_counts[month_key] = monthly_counts.get(month_key, 0) + 1
+
+    skip_rate = round(verdict_counts.get("Skip It", 0) / total * 100) if total else 0
+    top_category = max(category_counts, key=category_counts.get) if category_counts else None
+    top_category_count = category_counts.get(top_category, 0) if top_category else 0
+
+    insights = []
+    if top_category and top_category_count >= 3:
+        insights.append(f"You've evaluated {top_category_count} items in the \"{top_category}\" category — that's what you keep gravitating toward.")
+    if skip_rate >= 60 and total >= 5:
+        insights.append(f"You've skipped {skip_rate}% of items you've evaluated. You know what you don't want — that's a good sign.")
+    elif skip_rate <= 20 and total >= 5:
+        insights.append(f"You've only skipped {skip_rate}% of items. Be honest — are you looking for validation or actual advice?")
+    if total >= 10:
+        insights.append(f"You've evaluated {total} items total. That's a lot of browsing — make sure you're shopping with intention, not boredom.")
+
+    return render(request, "shopping_insights.html", {
+        "total": total,
+        "verdict_counts": verdict_counts,
+        "category_counts": category_counts,
+        "monthly_counts": monthly_counts,
+        "insights": insights,
+        "recent_evals": evaluations[:12],
+    })
+
+
+@login_required
+def shopping_share_view(request, eval_id):
+    import secrets
+    _ensure_shopping_table()
+    try:
+        evaluation = ShoppingEvaluation.objects.get(id=eval_id, user=request.user)
+    except ShoppingEvaluation.DoesNotExist:
+        from django.contrib import messages
+        messages.error(request, "Evaluation not found.")
+        return redirect("shopping_buddy")
+
+    if not evaluation.share_token:
+        evaluation.share_token = secrets.token_urlsafe(32)
+        evaluation.save()
+
+    share_url = request.build_absolute_uri(f"/shopping-buddy/shared/{evaluation.share_token}/")
+    return JsonResponse({"share_url": share_url})
+
+
+def shopping_shared_view(request, token):
+    _ensure_shopping_table()
+    try:
+        evaluation = ShoppingEvaluation.objects.get(share_token=token)
+    except ShoppingEvaluation.DoesNotExist:
+        from django.contrib import messages
+        messages.error(request, "This shared evaluation doesn't exist or has been removed.")
+        return redirect("home")
+
+    return render(request, "shopping_shared.html", {"evaluation": evaluation})

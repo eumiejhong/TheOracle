@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load image_filters %}
+
+{% block title %}Saved Items — The Oracle{% endblock %}
+
+{% block extra_css %}
+<style>
+    .wishlist-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1.2rem;
+        margin-top: var(--space-md);
+    }
+    .wishlist-card {
+        background: var(--bg-secondary);
+        overflow: hidden;
+        position: relative;
+    }
+    .wishlist-card img {
+        width: 100%;
+        aspect-ratio: 3/4;
+        object-fit: cover;
+        display: block;
+    }
+    .wishlist-card-body {
+        padding: 0.8rem;
+    }
+    .cooloff-badge {
+        display: inline-block;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 0.25rem 0.5rem;
+        margin-bottom: 0.4rem;
+    }
+    .cooloff-badge.ready { background: #e8f5e9; color: #2d6a4f; }
+    .cooloff-badge.waiting { background: var(--bg-primary); color: var(--text-muted); }
+    .verdict-tag {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+    .wishlist-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    .wishlist-actions button, .wishlist-actions a {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.6rem;
+        border: 1px solid var(--border);
+        background: var(--bg-primary);
+        color: var(--text-secondary);
+        cursor: pointer;
+        text-decoration: none;
+        font-family: var(--font-body);
+    }
+    .wishlist-actions button:hover, .wishlist-actions a:hover {
+        border-color: var(--text-primary);
+        color: var(--text-primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="container" style="max-width: 900px;">
+        <header class="dashboard-header">
+            <h3>Shopping Buddy</h3>
+            <h1 style="font-size: 2.5rem;">Saved for Later</h1>
+            <p style="color: var(--text-muted); margin-top: var(--space-xs); font-size: 0.95rem;">
+                Items you're sleeping on. If you still want it after 48 hours, it might be worth it.
+            </p>
+        </header>
+
+        <div style="display: flex; gap: var(--space-md); margin: var(--space-md) 0; font-size: 0.85rem;">
+            <a href="{% url 'shopping_buddy' %}" style="color: var(--text-secondary);">Evaluate New</a>
+            <a href="{% url 'shopping_insights' %}" style="color: var(--text-secondary);">Purchase Insights</a>
+        </div>
+
+        {% if saved_items %}
+        <div class="wishlist-grid">
+            {% for item in saved_items %}
+            <div class="wishlist-card">
+                {% if item.item_image %}
+                <img src="data:image/jpeg;base64,{{ item.item_image|b64encode }}" alt="Saved item">
+                {% endif %}
+                <div class="wishlist-card-body">
+                    {% if item.cooloff_complete %}
+                    <span class="cooloff-badge ready">Ready to decide</span>
+                    {% else %}
+                    <span class="cooloff-badge waiting">{{ item.hours_remaining }}h left</span>
+                    {% endif %}
+                    <div class="verdict-tag" style="{% if item.verdict == 'strong_buy' %}color: #2d6a4f;{% elif item.verdict == 'skip' %}color: #c44;{% else %}color: var(--text-secondary);{% endif %}">
+                        {{ item.get_verdict_display }}
+                    </div>
+                    {% if item.price %}
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">${{ item.price|floatformat:0 }}</div>
+                    {% endif %}
+                    <div class="wishlist-actions">
+                        <button onclick="unsave({{ item.id }}, this)">Remove</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="padding: var(--space-xl) 0; text-align: center; color: var(--text-muted);">
+            <p>Nothing saved yet. When you're on the fence about something, hit "Save for Later" to let it marinate.</p>
+            <a href="{% url 'shopping_buddy' %}" class="btn btn-primary" style="margin-top: var(--space-md);">Evaluate an Item</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCookie(name) {
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+        var c = cookies[i].trim();
+        if (c.startsWith(name + '=')) return decodeURIComponent(c.substring(name.length + 1));
+    }
+    return '';
+}
+
+function unsave(evalId, btn) {
+    fetch("/shopping-buddy/" + evalId + "/save/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (!data.saved) {
+            btn.closest(".wishlist-card").remove();
+        }
+    });
+}
+</script>
+{% endblock %}

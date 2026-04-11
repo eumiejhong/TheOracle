@@ -29,6 +29,11 @@ urlpatterns = [
     path("wardrobe/delete/", views.delete_wardrobe_item, name="delete_wardrobe_item"),
     path("shopping-buddy/", views.shopping_buddy_view, name="shopping_buddy"),
     path("shopping-buddy/<int:eval_id>/reply/", views.shopping_buddy_reply, name="shopping_buddy_reply"),
+    path("shopping-buddy/<int:eval_id>/save/", views.shopping_save_for_later, name="shopping_save_for_later"),
+    path("shopping-buddy/<int:eval_id>/share/", views.shopping_share_view, name="shopping_share"),
+    path("shopping-buddy/shared/<str:token>/", views.shopping_shared_view, name="shopping_shared"),
+    path("shopping-buddy/wishlist/", views.shopping_wishlist_view, name="shopping_wishlist"),
+    path("shopping-buddy/insights/", views.shopping_insights_view, name="shopping_insights"),
 ]
 
 # Serve media files in development

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load image_filters %}
+
+{% block title %}Shared Evaluation — The Oracle{% endblock %}
+
+{% block extra_css %}
+<style>
+    .shared-container { max-width: 700px; margin: 0 auto; }
+    .shared-item-img {
+        width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+        border: 1px solid var(--border);
+    }
+    .shared-convo {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+        padding: var(--space-md) 0;
+    }
+    .shared-msg {
+        max-width: 85%;
+        padding: 1rem 1.2rem;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    .shared-msg.oracle {
+        align-self: flex-start;
+        background: var(--bg-secondary);
+        border-left: 2px solid var(--text-primary);
+    }
+    .shared-msg.user {
+        align-self: flex-end;
+        background: var(--text-primary);
+        color: var(--bg-primary);
+    }
+    .shared-msg-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin-bottom: 0.4rem;
+        opacity: 0.6;
+    }
+    .shared-verdict {
+        padding: 1.2rem;
+        text-align: center;
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+        letter-spacing: 0.08em;
+        margin-top: var(--space-md);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="shared-container" style="padding-top: 80px;">
+        <header class="dashboard-header">
+            <h3>The Oracle</h3>
+            <h1 style="font-size: 2rem;">Shopping Buddy — Shared Evaluation</h1>
+        </header>
+
+        {% if evaluation.item_image %}
+        <div style="margin-bottom: var(--space-md);">
+            <img src="data:image/jpeg;base64,{{ evaluation.item_image|b64encode }}"
+                 alt="Item" class="shared-item-img">
+        </div>
+        {% endif %}
+
+        {% if evaluation.price %}
+        <p style="color: var(--text-muted); font-size: 0.9rem;">${{ evaluation.price|floatformat:0 }}{% if evaluation.occasion %} · {{ evaluation.occasion }}{% endif %}</p>
+        {% endif %}
+
+        <div class="shared-convo">
+            {% for msg in evaluation.conversation %}
+            <div class="shared-msg {{ msg.role }}">
+                <div class="shared-msg-label">{% if msg.role == "oracle" %}The Oracle{% else %}Them{% endif %}</div>
+                {% if msg.image_b64 %}<img src="data:image/jpeg;base64,{{ msg.image_b64 }}" style="max-width: 200px; margin-bottom: 0.5rem; display: block;" alt="Photo">{% endif %}
+                {{ msg.text|linebreaks }}
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if evaluation.is_complete %}
+        <div class="shared-verdict" style="{% if evaluation.verdict == 'strong_buy' %}background: #e8f5e9; color: #2d6a4f;{% elif evaluation.verdict == 'skip' %}background: #fff5f5; color: #c44;{% elif evaluation.verdict == 'redundant' %}background: var(--bg-secondary); color: var(--text-muted);{% else %}background: var(--bg-secondary); color: var(--text-secondary);{% endif %}">
+            {{ evaluation.get_verdict_display }}
+        </div>
+        {% endif %}
+
+        <div style="padding: var(--space-lg) 0; text-align: center;">
+            <a href="{% url 'home' %}" style="font-size: 0.85rem; color: var(--text-muted);">Try The Oracle yourself</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

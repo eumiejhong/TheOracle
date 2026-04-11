@@ -78,6 +78,13 @@ class ShoppingEvaluation(models.Model):
         ("redundant", "You Already Own This"),
     ], default="consider")
     is_complete = models.BooleanField(default=False)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    occasion = models.CharField(max_length=100, blank=True, default="")
+    product_url = models.URLField(max_length=500, blank=True, default="")
+    share_token = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    saved_for_later = models.BooleanField(default=False)
+    saved_at = models.DateTimeField(null=True, blank=True)
+    outfit_suggestions = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
