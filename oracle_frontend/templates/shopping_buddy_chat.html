@@ -379,7 +379,7 @@ function sendReply() {
     })
     .catch(function(err) {
         typing.classList.remove("visible");
-        addMessage("oracle", "Something went wrong. Try again.");
+        addMessage("oracle", "Hmm, I lost my train of thought — try sending that again.");
         sendBtn.disabled = false;
         chatInput.disabled = false;
     });

@@ -744,7 +744,7 @@ def shopping_buddy_reply(request, eval_id):
         return JsonResponse({"error": "Evaluation not found."}, status=404)
 
     if evaluation.is_complete:
-        return JsonResponse({"error": "This evaluation is already complete."}, status=400)
+        return JsonResponse({"error": "I've already given my verdict on this one. Start a new evaluation if you have another item."}, status=400)
 
     user_message = (request.POST.get("message") or "").strip()
     uploaded_image = request.FILES.get("image")
@@ -763,13 +763,13 @@ def shopping_buddy_reply(request, eval_id):
 
     ctx = request.session.get(f"shopping_ctx_{eval_id}")
     if not ctx:
-        return JsonResponse({"error": "Session expired. Please start a new evaluation."}, status=400)
+        return JsonResponse({"error": "Looks like the session timed out — start a new evaluation and I'll take another look."}, status=400)
 
     turn = ctx.get("turn", 1)
     has_photo = ctx.get("photos_sent", 0)
     max_turns = 3 + min(has_photo, 2)
     if turn > max_turns + 2:
-        return JsonResponse({"error": "This conversation has ended. Start a new evaluation.", "is_complete": True}, status=400)
+        return JsonResponse({"error": "We've gone back and forth enough — start a new evaluation if you want to try another item.", "is_complete": True}, status=400)
     messages_list = ctx["messages"]
 
     if image_b64:
@@ -805,7 +805,7 @@ If your verdict is STRONG BUY or WORTH CONSIDERING, end with 'STYLE WITH:' follo
         )
         oracle_reply = response.choices[0].message.content
     except Exception as e:
-        return JsonResponse({"error": f"Failed to get response: {str(e)}"}, status=500)
+        return JsonResponse({"error": "I hit a snag trying to respond — give it another shot."}, status=500)
 
     conversation = evaluation.conversation or []
     conv_entry = {"role": "user", "text": user_message or "(photo)"}
