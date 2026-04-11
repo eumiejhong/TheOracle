@@ -562,9 +562,9 @@ Wardrobe: {overlap_summary}"""
 
         first_message_text = f"""Before giving advice, first describe what you physically observe about the person in the photo:
 
-BODY: Estimate their height (petite, average, tall). Note their proportions — are their legs long relative to their torso, or the opposite? Are their shoulders wider or narrower than their hips? What's their overall frame — slim, athletic, curvy? These details matter because they determine which silhouettes will work.
+BODY: Look at the photo and commit to a read on their body. Use visual cues — the proportions of their head to body, limb length, torso-to-leg ratio, the scale of their hands and feet, any background objects for reference like door frames, mirrors, or furniture. Don't hedge with "if they're on the shorter side" — make a call. Say "you look about 5'3" to me" or "you've got a longer torso and shorter legs" — be definitive based on what you see.
 
-SILHOUETTE ANALYSIS: Now look at this specific garment on their body. Where does the hem hit — and is that the right place for someone with their proportions? A coat that hits mid-calf on a petite person creates a totally different effect than on someone tall. Does this silhouette elongate them, cut them in half, or overwhelm their frame? Would a cropped, hip-length, or longer version work better for their specific body? What would a stylist alter to make this piece work better on them?
+SILHOUETTE: Based on the height and proportions you just identified, how does this specific garment work on THEIR frame? Where does the hem hit relative to their body — knee, mid-calf, ankle? And is that the right length for someone their height? Does this silhouette elongate them or cut them off? What specific length or cut would be better for their proportions?
 
 COLORING: Describe their actual skin — not with labels, but as you see it. Then: how does the garment's color read right against their skin at the neckline and face?
 
