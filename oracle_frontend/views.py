@@ -533,8 +533,10 @@ def shopping_buddy_view(request):
 
 Talk like a real person in a fitting room. No lists, no bullet points, no markdown, no asterisks. Always include a buy or skip recommendation.
 
-BANNED PHRASES (never use these — they are generic filler):
-"complements your features," "balanced appearance," "medium build," "medium proportions," "neutral undertone," "adds contrast," "doesn't wash you out," "works well with your skin tone," "maintains a sophisticated look," "pairs well with your coloring"
+BANNED (never use any of these):
+- Generic phrases: "complements your features," "balanced appearance," "medium build," "medium proportions," "neutral undertone," "adds contrast," "doesn't wash you out," "works well with your skin tone," "maintains a sophisticated look," "pairs well with your coloring," "lovely warmth," "harmonious look"
+- Section headers or labels like **BODY:** or **SILHOUETTE:** or **COLORING:** — write as flowing conversation, not a structured report
+- Height guesses in feet/inches — describe proportions instead
 
 Instead of those, describe EXACTLY what you observe: where the shoulder seam falls relative to their actual shoulder, whether the fabric is bunching at the hip or pulling across the chest, how the neckline frames their jaw, whether their skin looks warmer or cooler right where it meets the fabric vs. further from it.
 
@@ -560,17 +562,13 @@ Wardrobe: {overlap_summary}"""
 
         wardrobe_ref = ' I showed you photos of their similar pieces too — compare visually.' if similar_items_with_images else ''
 
-        first_message_text = f"""Before giving advice, first describe what you physically observe about the person in the photo:
+        first_message_text = f"""Write your response as flowing conversation — NO section headers, NO labels like "BODY:" or "SILHOUETTE:", NO bold text. Just talk naturally as one continuous response.
 
-BODY: Look at the photo and commit to a read on their body. Use visual cues — the proportions of their head to body, limb length, torso-to-leg ratio, the scale of their hands and feet, any background objects for reference like door frames, mirrors, or furniture. Don't hedge with "if they're on the shorter side" — make a call. Say "you look about 5'3" to me" or "you've got a longer torso and shorter legs" — be definitive based on what you see.
+Look at this person and tell them how this piece works on them. Talk about their proportions and frame — are their legs long, is their torso short, are their shoulders narrow or broad relative to their hips? Then tell them how this garment interacts with those proportions. Where the hem hits, whether the silhouette is elongating or shortening them, whether the volume is in the right places for their frame. Don't guess their height in feet — just describe their proportions as you see them and how the garment relates to that.
 
-SILHOUETTE: Based on the height and proportions you just identified, how does this specific garment work on THEIR frame? Where does the hem hit relative to their body — knee, mid-calf, ankle? And is that the right length for someone their height? Does this silhouette elongate them or cut them off? What specific length or cut would be better for their proportions?
+Look at the color against their skin at the neckline and face. Does it bring warmth or flatten them?
 
-COLORING: Describe their actual skin — not with labels, but as you see it. Then: how does the garment's color read right against their skin at the neckline and face?
-
-Then give your gut reaction — does this piece work for them or not? Say buy or skip and why.{wardrobe_ref}
-
-Ask one question."""
+Compare to their wardrobe if relevant.{wardrobe_ref} Say buy or skip and why. Ask one question."""
 
         first_content.append({"type": "text", "text": first_message_text})
 
