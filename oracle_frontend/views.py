@@ -421,20 +421,21 @@ def suggestion_detail_view(request, suggestion_id):
 
 def _ensure_shopping_table():
     from django.db import connection
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS oracle_data_shoppingevaluation (
-                id BIGSERIAL PRIMARY KEY,
-                item_image BYTEA,
-                item_description JSONB NOT NULL DEFAULT '{}'::jsonb,
-                evaluation TEXT NOT NULL DEFAULT '',
-                conversation JSONB NOT NULL DEFAULT '[]'::jsonb,
-                verdict VARCHAR(20) NOT NULL DEFAULT 'consider',
-                is_complete BOOLEAN NOT NULL DEFAULT FALSE,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                user_id INTEGER NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE
-            );
-        """)
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS oracle_data_shoppingevaluation (
+                    id BIGSERIAL PRIMARY KEY,
+                    item_image BYTEA,
+                    item_description JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    evaluation TEXT NOT NULL DEFAULT '',
+                    conversation JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    verdict VARCHAR(20) NOT NULL DEFAULT 'consider',
+                    is_complete BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    user_id INTEGER NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE
+                );
+            """)
         for col_sql in [
             "ADD COLUMN IF NOT EXISTS conversation JSONB NOT NULL DEFAULT '[]'::jsonb",
             "ADD COLUMN IF NOT EXISTS is_complete BOOLEAN NOT NULL DEFAULT FALSE",
@@ -446,7 +447,13 @@ def _ensure_shopping_table():
             "ADD COLUMN IF NOT EXISTS saved_at TIMESTAMPTZ",
             "ADD COLUMN IF NOT EXISTS outfit_suggestions JSONB NOT NULL DEFAULT '[]'::jsonb",
         ]:
-            cursor.execute(f"ALTER TABLE oracle_data_shoppingevaluation {col_sql};")
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(f"ALTER TABLE oracle_data_shoppingevaluation {col_sql};")
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 @login_required
