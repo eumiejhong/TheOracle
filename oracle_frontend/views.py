@@ -674,11 +674,15 @@ Compare to their wardrobe if relevant.{wardrobe_ref} Say buy or skip and why. As
         ]
 
         response = get_openai_client().chat.completions.create(
-            model="gpt-5.4",
+            model="gpt-4o",
             messages=messages_list,
             temperature=0.65,
         )
-        oracle_reply = response.choices[0].message.content
+        oracle_reply = response.choices[0].message.content or ""
+        print(f"[SHOPPING BUDDY] oracle_reply length: {len(oracle_reply)}, first 200 chars: {oracle_reply[:200]}")
+
+        if not oracle_reply.strip():
+            return HttpResponse("Error: The Oracle returned an empty response. Please try again.", status=500)
 
         conversation = [
             {"role": "oracle", "text": oracle_reply},
@@ -788,7 +792,7 @@ def shopping_buddy_reply(request, eval_id):
 
     try:
         response = get_openai_client().chat.completions.create(
-            model="gpt-5.4",
+            model="gpt-4o",
             messages=messages_list,
             temperature=0.6,
         )

@@ -172,12 +172,18 @@
         </div>
         {% endif %}
 
+        <!-- DEBUG: conversation has {{ evaluation.conversation|length }} messages, eval id={{ evaluation.id }} -->
         <div class="chat-thread" id="chat-thread">
             {% for msg in evaluation.conversation %}
             <div class="chat-msg {{ msg.role }}">
                 <div class="chat-msg-label">{% if msg.role == "oracle" %}The Oracle{% else %}You{% endif %}</div>
                 {% if msg.image_b64 %}<img src="data:image/jpeg;base64,{{ msg.image_b64 }}" class="chat-img" alt="Photo">{% endif %}
                 {{ msg.text|linebreaks }}
+            </div>
+            {% empty %}
+            <div class="chat-msg oracle">
+                <div class="chat-msg-label">The Oracle</div>
+                <p>Something went wrong — no response was generated. <a href="{% url 'shopping_buddy' %}">Try again</a>.</p>
             </div>
             {% endfor %}
             <div class="typing-indicator" id="typing-indicator">The Oracle is thinking...</div>
