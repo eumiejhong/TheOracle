@@ -473,8 +473,12 @@ def shopping_buddy_view(request):
     import json
     from oracle_frontend.archetype_generator import get_openai_client
     from oracle_frontend.shared_helpers import get_serialized_wardrobe
+    from django.http import HttpResponse
 
-    _ensure_shopping_table()
+    try:
+        _ensure_shopping_table()
+    except Exception:
+        pass
 
     user_email = request.user.email
 
@@ -484,7 +488,10 @@ def shopping_buddy_view(request):
         past_evals = []
 
     if request.method != "POST":
-        return render(request, "shopping_buddy_form.html", {"past_evals": past_evals})
+        try:
+            return render(request, "shopping_buddy_form.html", {"past_evals": past_evals})
+        except Exception as e:
+            return HttpResponse(f"Template error: {type(e).__name__}: {e}", status=500)
 
     try:
         image_file = request.FILES.get("image")
@@ -716,9 +723,7 @@ Compare to their wardrobe if relevant.{wardrobe_ref} Say buy or skip and why. As
         import traceback
         tb_str = traceback.format_exc()
         print(f"[SHOPPING BUDDY ERROR] {tb_str}")
-        from django.contrib import messages
-        messages.error(request, f"Something went wrong: {type(e).__name__}: {str(e)}")
-        return redirect("shopping_buddy")
+        return HttpResponse(f"Shopping Buddy error: {type(e).__name__}: {e}", status=500)
 
 
 @require_POST
