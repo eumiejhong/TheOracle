@@ -790,7 +790,11 @@ def shopping_buddy_reply(request, eval_id):
     if is_final_turn:
         messages_list.append({
             "role": "system",
-            "content": "IMPORTANT: If the user's message is off-topic (not about fashion, clothing, or this item), respond ONLY with: \"I'm your stylist, not a search engine — let's stay focused on whether this piece works for you.\" and do NOT give a verdict. Otherwise, this is the final turn. Give your definitive verdict now. Start with 'VERDICT:' followed by one of: STRONG BUY, WORTH CONSIDERING, SKIP IT, or YOU ALREADY OWN THIS. Then give your final honest assessment in 2-3 sentences — be direct about whether this is a smart purchase. Don't ask any more questions. If your verdict is STRONG BUY or WORTH CONSIDERING, end with 'STYLE WITH:' followed by 2-3 specific outfit ideas using items from their wardrobe that would work with this new piece. Use exact item names from the wardrobe."
+            "content": """IMPORTANT: If the user's message is off-topic (not about fashion, clothing, or this item), respond ONLY with: "I'm your stylist, not a search engine — let's stay focused on whether this piece works for you." and do NOT give a verdict.
+
+Otherwise, this is the final turn. Give your definitive verdict now. Start with 'VERDICT:' followed by one of: STRONG BUY, WORTH CONSIDERING, SKIP IT, or YOU ALREADY OWN THIS. Then give your final honest assessment in 2-3 sentences — be direct about whether this is a smart purchase. Don't ask any more questions.
+
+If your verdict is STRONG BUY or WORTH CONSIDERING, end with 'STYLE WITH:' followed by 2-3 complete outfit ideas built around this specific item using pieces from their wardrobe. Think about what category the item is — if it's outerwear, suggest what goes UNDER it (tops, bottoms, shoes). If it's a top, suggest bottoms and shoes. Don't pair it with items from the same category (e.g. don't suggest wearing a blazer under a jacket). Each outfit should be a full look that makes sense together. Use exact item names from the wardrobe."""
         })
 
     try:
