@@ -768,6 +768,8 @@ def shopping_buddy_reply(request, eval_id):
     turn = ctx.get("turn", 1)
     has_photo = ctx.get("photos_sent", 0)
     max_turns = 3 + min(has_photo, 2)
+    if turn > max_turns + 2:
+        return JsonResponse({"error": "This conversation has ended. Start a new evaluation.", "is_complete": True}, status=400)
     messages_list = ctx["messages"]
 
     if image_b64:
@@ -784,10 +786,11 @@ def shopping_buddy_reply(request, eval_id):
     else:
         messages_list.append({"role": "user", "content": user_message})
 
-    if turn >= max_turns - 1:
+    is_final_turn = turn >= max_turns - 1
+    if is_final_turn:
         messages_list.append({
             "role": "system",
-            "content": "This is the final turn. Give your definitive verdict now. Start with 'VERDICT:' followed by one of: STRONG BUY, WORTH CONSIDERING, SKIP IT, or YOU ALREADY OWN THIS. Then give your final honest assessment in 2-3 sentences — be direct about whether this is a smart purchase. Don't ask any more questions. If your verdict is STRONG BUY or WORTH CONSIDERING, end with 'STYLE WITH:' followed by 2-3 specific outfit ideas using items from their wardrobe that would work with this new piece. Use exact item names from the wardrobe."
+            "content": "IMPORTANT: If the user's message is off-topic (not about fashion, clothing, or this item), respond ONLY with: \"I'm your stylist, not a search engine — let's stay focused on whether this piece works for you.\" and do NOT give a verdict. Otherwise, this is the final turn. Give your definitive verdict now. Start with 'VERDICT:' followed by one of: STRONG BUY, WORTH CONSIDERING, SKIP IT, or YOU ALREADY OWN THIS. Then give your final honest assessment in 2-3 sentences — be direct about whether this is a smart purchase. Don't ask any more questions. If your verdict is STRONG BUY or WORTH CONSIDERING, end with 'STYLE WITH:' followed by 2-3 specific outfit ideas using items from their wardrobe that would work with this new piece. Use exact item names from the wardrobe."
         })
 
     try:
@@ -808,7 +811,8 @@ def shopping_buddy_reply(request, eval_id):
     conversation.append({"role": "oracle", "text": oracle_reply})
     evaluation.conversation = conversation
 
-    is_final = turn >= max_turns - 1
+    has_verdict = "VERDICT:" in oracle_reply.upper()
+    is_final = is_final_turn and has_verdict
     if is_final:
         evaluation.is_complete = True
         evaluation.evaluation = oracle_reply
