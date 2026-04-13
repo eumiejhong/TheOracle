@@ -17,6 +17,11 @@ staticfiles/
 # Dataset (too large for git)
 oracle_dataset/
 
+# Node / Mobile
+node_modules/
+mobile/node_modules/
+.expo/
+
 # OS files
 .DS_Store
 *.swp
