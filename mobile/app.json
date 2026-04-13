@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "The Oracle",
+    "slug": "the-oracle",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#FCF7F0",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.theoracle.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "The Oracle needs camera access to evaluate items in stores.",
+        "NSPhotoLibraryUsageDescription": "The Oracle needs photo library access to upload wardrobe items."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FCF7F0"
+      },
+      "package": "com.theoracle.app",
+      "permissions": [
+        "CAMERA"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "The Oracle needs camera access to snap items in stores."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The Oracle needs photo access to upload wardrobe items."
+        }
+      ],
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}

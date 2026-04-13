@@ -1,19 +1,27 @@
 import base64
-from openai import OpenAI
-import os
+import io
+from PIL import Image as PILImage
 import json
+from oracle_frontend.ai_config import get_openai_client, OPENAI_MODEL
 
-_client = None
-
-def _get_client():
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    return _client
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:
+    pass
 
 
 def describe_image_with_gpt4v(image_file, item_name_hint=None):
     image_bytes = image_file.read()
+    try:
+        img = PILImage.open(io.BytesIO(image_bytes))
+        if img.mode in ("RGBA", "P", "LA"):
+            img = img.convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        image_bytes = buf.getvalue()
+    except Exception:
+        pass
     image_data = base64.b64encode(image_bytes).decode("utf-8")
 
     hint_text = f"\nThe user says this item is: {item_name_hint}." if item_name_hint else ""
@@ -41,8 +49,8 @@ def describe_image_with_gpt4v(image_file, item_name_hint=None):
     }}
         """
 
-    response = _get_client().chat.completions.create(
-        model="gpt-4o",
+    response = get_openai_client().chat.completions.create(
+        model=OPENAI_MODEL,
         messages=[
             {"role": "system", "content": "You are a structured visual fashion assistant."},
             {

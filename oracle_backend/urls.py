@@ -34,6 +34,7 @@ urlpatterns = [
     path("shopping-buddy/shared/<str:token>/", views.shopping_shared_view, name="shopping_shared"),
     path("shopping-buddy/wishlist/", views.shopping_wishlist_view, name="shopping_wishlist"),
     path("shopping-buddy/insights/", views.shopping_insights_view, name="shopping_insights"),
+    path("api/v1/", include("oracle_api.urls")),
 ]
 
 # Serve media files in development

@@ -3,6 +3,7 @@ from datetime import datetime
 from oracle_data.models import UserStyleProfile, DailyStyleInput
 from oracle_frontend.utils import combine_style_summary
 from oracle_frontend.archetype_generator import generate_style_archetype, generate_today_styling_suggestion
+from oracle_frontend.ai_config import OPENAI_MODEL
 
 _bge = None
 
@@ -53,7 +54,7 @@ def save_style_profile(profile: dict, user_id: str):
 
 
 
-def save_daily_input(user_id: str, daily_context: dict, model_name: str = "gpt-4o"):
+def save_daily_input(user_id: str, daily_context: dict, model_name: str = None):
     try:
         profile = UserStyleProfile.objects.filter(user_id=user_id).latest("created_at")
     except UserStyleProfile.DoesNotExist:
@@ -73,7 +74,7 @@ def save_daily_input(user_id: str, daily_context: dict, model_name: str = "gpt-4
         "lifestyle": profile.lifestyle
     })
 
-    outfit_suggestion = generate_today_styling_suggestion(summary_text, daily_context)
+    outfit_suggestion = generate_today_styling_suggestion(summary_text, daily_context, model_name=model_name or OPENAI_MODEL)
 
     if existing_entry:
         # Update existing entry

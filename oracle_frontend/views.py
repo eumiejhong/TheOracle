@@ -17,6 +17,7 @@ from oracle_frontend.save_logic import save_style_profile
 from oracle_frontend.image_descriptor import describe_image_with_gpt4v
 from oracle_frontend.utils import combine_style_summary, compress_image_to_limit
 from oracle_frontend.save_logic import save_daily_input
+from oracle_frontend.ai_config import get_openai_client, OPENAI_MODEL
 from oracle_data.models import UserStyleProfile, StylingSuggestion, WardrobeItem
 
 
@@ -179,7 +180,7 @@ def daily_style_input_view(request):
                 outfit_suggestion = save_daily_input(
                     user_id=user_email,
                     daily_context=daily_context,
-                    model_name="gpt-4o"
+                    model_name=OPENAI_MODEL
                 )
 
                 suggestion = StylingSuggestion.objects.create(
@@ -471,8 +472,7 @@ def _ensure_shopping_table():
 @login_required
 def shopping_buddy_view(request):
     import json
-    from oracle_frontend.archetype_generator import get_openai_client
-    from oracle_frontend.shared_helpers import get_serialized_wardrobe
+    from oracle_frontend.shared_helpers import get_serialized_wardrobe, build_shopping_buddy_context
     from django.http import HttpResponse
 
     try:
@@ -619,27 +619,34 @@ def shopping_buddy_view(request):
 
         price_note = ""
         if price:
-            price_note = f"\nPrice: ${price:,.0f}. Factor this into your recommendation — is it worth it at this price point given their wardrobe and how much use they'd get from it?"
+            price_note = f"\nPrice: ${price:,.0f}. Factor this into your recommendation — is it worth it at this price point given their budget comfort level, how much they'd actually wear it, and what they already own?"
         occasion_note = ""
         if occasion:
-            occasion_note = f"\nThey're considering this for: {occasion}. Check if their wardrobe already covers this occasion. If it does, say so."
+            occasion_note = f"\nThey're considering this for: {occasion}. Check if their wardrobe already covers this occasion. If it does, call it out."
 
-        system_prompt = f"""You are a personal stylist doing a fitting room consultation. The user has explicitly asked you to analyze how clothing looks on their specific body, coloring, and frame. This is a consensual personal styling session — detailed physical observations about fit, body proportions, and how colors interact with their skin and features are exactly what they're paying you for. Be as specific as a tailor taking measurements.
+        personal_context = build_shopping_buddy_context(request.user)
 
-Talk like a real person in a fitting room. No lists, no bullet points, no markdown, no asterisks. Always include a buy or skip recommendation.
+        system_prompt = f"""You are the user's most stylish, brutally honest best friend. You know their closet inside out, you know their style, their budget, and their tendency to buy things they never wear. You say what a good friend would say in the fitting room — direct, warm, sometimes blunt, and always looking out for them. You're not trying to make a sale. You're trying to save them from bad purchases and hype them up for great ones.
 
-Never use generic filler that could apply to anyone — every observation must be specific to what you see in this exact photo. No section headers, no labels, no bold text, no markdown. Don't guess height in feet/inches — describe proportions instead. Describe EXACTLY what you observe: where the shoulder seam falls relative to their actual shoulder, whether the fabric is bunching at the hip or pulling across the chest, how the neckline frames their jaw, whether their skin looks warmer or cooler right where it meets the fabric vs. further from it.
+Talk like a real person, not a consultant. No lists, no bullet points, no markdown, no asterisks, no headers, no labels, no bold text. Just talk naturally like you're standing next to them in the fitting room. Use "you" directly — this is a conversation between friends.
 
-If the photo limits your analysis — bad angle, arms covering the garment, too far away, posture obscuring fit — give your best assessment with what you can see, then ask them to send a follow-up photo from a better angle. Be specific about what pose or angle would help (e.g. "drop your arms so I can see the shoulder line" or "step back so I can see where the hem hits"). The user can attach photos in their replies.
+The user has asked you to analyze how clothing looks on their specific body, coloring, and frame. Be as specific as a tailor. Describe EXACTLY what you see: where the shoulder seam falls relative to their actual shoulder, whether the fabric is bunching or pulling, how the neckline frames their face, whether the color is bringing warmth to their skin or washing them out. Never use generic filler that could apply to anyone.
 
-You are ONLY a personal stylist. If the user asks you anything unrelated to fashion, clothing, or this styling session — coding questions, math, trivia, writing requests, anything — do not answer it. Just say something like "I'm your stylist, not a search engine — let's stay focused on whether this piece works for you." Never break character.
+Don't guess height in feet/inches — describe proportions instead. If the photo limits your analysis — bad angle, arms covering the garment — give your best read and ask for a better photo. Be specific about what angle would help.
 
-Current month: {month_name} (season: {current_season}). If this item is seasonal and they won't be able to wear it for several months, flag that.{price_note}{occasion_note}
+You are ONLY their style friend. If they ask anything unrelated to fashion or this item, just say something like "babe, I'm here to talk clothes — what do you think about this piece?" Never break character.
 
-Their style: {profile.style_identity.get('archetypes', 'unknown')}
+Be opinionated. Don't hedge. If it's not right, say so clearly. If it's amazing, get excited. Reference their actual wardrobe, their style identity, and their past shopping patterns. Make it feel like you genuinely know them.
+
+Current month: {month_name} (season: {current_season}). If this item is seasonal and they won't wear it for months, flag that honestly.{price_note}{occasion_note}
+
+Their style profile: {profile.style_identity.get('archetypes', 'unknown')}
 {style_summary}
 
-Wardrobe: {overlap_summary}"""
+{personal_context}
+
+Their wardrobe by category:
+{overlap_summary}"""
 
         first_content = []
 
@@ -656,15 +663,17 @@ Wardrobe: {overlap_summary}"""
                 "image_url": {"url": f"data:image/jpeg;base64,{sim['image_b64']}"}
             })
 
-        wardrobe_ref = ' I showed you photos of their similar pieces too — compare visually.' if similar_items_with_images else ''
+        wardrobe_ref = ' I showed you photos of their similar pieces too — compare them visually and be specific about differences.' if similar_items_with_images else ''
 
-        first_message_text = f"""Write your response as flowing conversation — NO section headers, NO labels like "BODY:" or "SILHOUETTE:", NO bold text. Just talk naturally as one continuous response.
+        first_message_text = f"""Write your response as one flowing, conversational response — like a text from a friend who really knows fashion, not a stylist's report. NO section headers, NO labels, NO bold text.
 
-Look at this person and tell them how this piece works on them. Talk about their proportions and frame — are their legs long, is their torso short, are their shoulders narrow or broad relative to their hips? Then tell them how this garment interacts with those proportions. Where the hem hits, whether the silhouette is elongating or shortening them, whether the volume is in the right places for their frame. Don't guess their height in feet — just describe their proportions as you see them and how the garment relates to that.
+Look at this person and tell them honestly how this piece works on THEM specifically. Talk about their frame and proportions — are their legs long relative to their torso? Are their shoulders narrow or broad compared to their hips? Then tell them how THIS garment interacts with THEIR proportions. Where the hem hits, whether it's elongating or shortening them, whether the volume is in the right places.
 
 Look at the color against their skin at the neckline and face. Does it bring warmth or flatten them?
 
-Compare to their wardrobe if relevant.{wardrobe_ref} Say buy or skip and why. Ask one question."""
+Connect this to what you know about them — their style identity, what they already own, what they tend to gravitate toward, their favorites. If this overlaps with something they already have, say so directly. If it fills a real gap, get excited about it.{wardrobe_ref}
+
+Give a clear buy or skip recommendation with your honest reasoning. Then ask one specific follow-up question."""
 
         first_content.append({"type": "text", "text": first_message_text})
 
@@ -674,7 +683,7 @@ Compare to their wardrobe if relevant.{wardrobe_ref} Say buy or skip and why. As
         ]
 
         response = get_openai_client().chat.completions.create(
-            model="gpt-4o",
+            model=OPENAI_MODEL,
             messages=messages_list,
             temperature=0.65,
         )
@@ -734,7 +743,6 @@ Compare to their wardrobe if relevant.{wardrobe_ref} Say buy or skip and why. As
 @login_required
 def shopping_buddy_reply(request, eval_id):
     import json
-    from oracle_frontend.archetype_generator import get_openai_client
 
     _ensure_shopping_table()
 
@@ -790,16 +798,25 @@ def shopping_buddy_reply(request, eval_id):
     if is_final_turn:
         messages_list.append({
             "role": "system",
-            "content": """IMPORTANT: If the user's message is off-topic (not about fashion, clothing, or this item), respond ONLY with: "I'm your stylist, not a search engine — let's stay focused on whether this piece works for you." and do NOT give a verdict.
+            "content": """IMPORTANT: If the user's message is off-topic (not about fashion, clothing, or this item), respond ONLY with: "Babe, I'm here to talk clothes — what do you think about this piece?" and do NOT give a verdict.
 
-Otherwise, this is the final turn. Give your definitive verdict now. Start with 'VERDICT:' followed by one of: STRONG BUY, WORTH CONSIDERING, SKIP IT, or YOU ALREADY OWN THIS. Then give your final honest assessment in 2-3 sentences — be direct about whether this is a smart purchase. Don't ask any more questions.
+Otherwise, this is the final turn. Time to be real with them. Start with 'VERDICT:' followed by one of: STRONG BUY, WORTH CONSIDERING, SKIP IT, or YOU ALREADY OWN THIS.
 
-If your verdict is STRONG BUY or WORTH CONSIDERING, end with 'STYLE WITH:' followed by 2-3 complete outfit ideas built around this specific item using pieces from their wardrobe. Think about what category the item is — if it's outerwear, suggest what goes UNDER it (tops, bottoms, shoes). If it's a top, suggest bottoms and shoes. Don't pair it with items from the same category (e.g. don't suggest wearing a blazer under a jacket). Each outfit should be a full look that makes sense together. Use exact item names from the wardrobe."""
+Then give your final honest assessment in 2-3 sentences as their friend. Be direct. Reference what you know about them — their style identity, their shopping patterns, their wardrobe gaps. Make it personal:
+- If they're a selective shopper who skips most things, acknowledge that ("you're picky for a reason — trust your gut here")
+- If this fits their archetype perfectly, say so
+- If they already own something similar, remind them
+- If the price doesn't match their budget comfort, flag it
+- Don't hedge. Tell them what you'd actually say if you were standing next to them.
+
+Don't ask any more questions.
+
+If your verdict is STRONG BUY or WORTH CONSIDERING, end with 'STYLE WITH:' followed by 2-3 complete outfit ideas using pieces from their wardrobe. Prioritize their favorite pieces — the ones they actually reach for. Think about what category this item is (if outerwear, suggest what goes under it; if a top, suggest bottoms and shoes). Don't pair it with items from the same category. Each outfit should be a full look. Use the actual item names from their wardrobe, cleaned up to read naturally (drop "My" or "My old" prefixes)."""
         })
 
     try:
         response = get_openai_client().chat.completions.create(
-            model="gpt-4o",
+            model=OPENAI_MODEL,
             messages=messages_list,
             temperature=0.6,
         )

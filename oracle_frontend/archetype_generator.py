@@ -1,20 +1,8 @@
-import openai
-from openai import OpenAI
-import os
-from dotenv import load_dotenv
-from oracle_data.models import WardrobeItem
+import json
+from openai import OpenAIError
+from oracle_frontend.ai_config import get_openai_client, OPENAI_MODEL
 from oracle_frontend.shared_helpers import get_serialized_wardrobe, fetch_user_wardrobe
 from oracle_frontend.utils import update_last_used
-
-load_dotenv()
-
-_client = None
-
-def get_openai_client():
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    return _client
 
 
 def generate_style_archetype(summary_text: str, user_id: str) -> str:
@@ -28,7 +16,7 @@ def generate_style_archetype(summary_text: str, user_id: str) -> str:
     else:
         wardrobe_note = ""
 
-    prompt = f"""You are The Oracle — a sharp, experienced personal stylist with an editorial eye and deep knowledge of fashion houses, fit, and proportion.
+    prompt = f"""You are The Oracle \u2014 a sharp, experienced personal stylist with an editorial eye and deep knowledge of fashion houses, fit, and proportion.
 
 No bullet points. No markdown. No headers. No asterisks. Just clear, confident sentences.
 
@@ -37,9 +25,9 @@ Based on the following profile, write a 2-3 paragraph style assessment. Start wi
 - What silhouettes and proportions they gravitate toward
 - The brands, references, or aesthetic world they live in
 - How their wardrobe choices reflect their lifestyle and preferences
-- Specific, practical observations — not abstract metaphors
+- Specific, practical observations \u2014 not abstract metaphors
 
-Be direct and knowledgeable, like a stylist who actually understands garments, not a poet. Think Celine-era Phoebe Philo, The Row, or a Vogue editor's fitting notes. Warm but precise.
+Be direct and knowledgeable, like a stylist who actually understands garments, not a poet. Think Celine-era Phoebe Philo, The Row, or a Vogue editor\u2019s fitting notes. Warm but precise.
 
 ---
 
@@ -49,7 +37,7 @@ Style Profile:
 {wardrobe_note}"""
 
     response = get_openai_client().chat.completions.create(
-        model="gpt-4o",
+        model=OPENAI_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7
     )
@@ -57,12 +45,10 @@ Style Profile:
     return response.choices[0].message.content
 
 
-def generate_today_styling_suggestion(summary_text, daily_context, model_name="gpt-4o-mini"):
-    import json
-    from openai import OpenAIError
-
+def generate_today_styling_suggestion(summary_text, daily_context, model_name=None):
     user_id = daily_context["user_id"]
     focus_item_name = daily_context.get("item_focus", "").strip()
+    model = model_name or OPENAI_MODEL
 
     wardrobe_items = get_serialized_wardrobe(user_id)
     focus_items = []
@@ -71,7 +57,6 @@ def generate_today_styling_suggestion(summary_text, daily_context, model_name="g
     image_desc = daily_context.get("image_description", {})
     image_name_hint = image_desc.get("name_hint", "").strip()
 
-    # If name_hint is missing or 'None', create a smart fallback name
     if not image_name_hint or image_name_hint.lower() == "none":
         color = image_desc.get("colors", ["Black"])[0].capitalize()
         category = image_desc.get("category_guess", "Item").capitalize()
@@ -84,7 +69,7 @@ def generate_today_styling_suggestion(summary_text, daily_context, model_name="g
             "color": ", ".join(image_desc.get("colors", [])),
             "style_tags": image_desc.get("patterns", []) + [image_desc.get("silhouette", "")],
             "is_uploaded_focus": True,
-            "image_b64": image_desc.get("image_b64")  
+            "image_b64": image_desc.get("image_b64")
         }
         wardrobe_items.insert(0, pseudo_item)
         focus_items.append(pseudo_item)
@@ -100,42 +85,56 @@ def generate_today_styling_suggestion(summary_text, daily_context, model_name="g
     # ----- Compose focus note -----
     if focus_items:
         focus_descriptions = "\n".join(json.dumps(item, indent=2) for item in focus_items)
-        focus_note = f"""
-        The following items are marked as focus items and MUST be styled into today’s outfit:
-        {focus_descriptions}
-
-        Do NOT ignore or replace these. Each should appear as-is, without changing their category or style."""
+        focus_categories = [item.get("category", "unknown") for item in focus_items]
+        category_list = ", ".join(c for c in focus_categories if c and c != "unknown")
+        focus_note = (
+            f"The following items are the FOCUS of today's outfit and MUST be included:\n"
+            f"{focus_descriptions}\n\n"
+            f"CRITICAL RULES for focus items:\n"
+            f"- Build the entire outfit AROUND these items.\n"
+            f"- Each focus item fills its category slot. If the focus item is a jacket, coat, "
+            f"blazer, or any outerwear, it IS the outerwear layer. Do NOT suggest a second "
+            f"outerwear piece on top of it or alongside it. Same for any other category: "
+            f"if the focus is trousers, do not add another bottom.\n"
+            f"- Never double up on the same category as the focus item.\n"
+            f"- The focus item's detected category: {category_list or 'see item details above'}.\n"
+            f"- Do NOT ignore, replace, or rename the focus item."
+        )
     else:
         focus_note = "No specific focus item, use any item from the wardrobe as the anchor."
 
     wardrobe_note = f"\nThe user's wardrobe (JSON format):\n{json.dumps(wardrobe_items, indent=2)}"
 
     # ----- Final prompt -----
-    prompt = f"""You are The Oracle — a sharp personal stylist with deep knowledge of fashion, fit, and proportion.
+    prompt = f"""You are The Oracle \u2014 a sharp personal stylist with deep knowledge of fashion, fit, and proportion.
 
 Your job: pull a complete outfit from the user's ACTUAL wardrobe for today. Every single piece you suggest must be referenced by its EXACT name from the wardrobe list below.
 
-WRONG — never do this:
+WRONG \u2014 never do this:
 "Layer the trench over a simple top and tailored bottoms. Pair with loafers for a chic look."
 This is wrong because it uses vague descriptions and doesn't name actual wardrobe items.
 
-ALSO WRONG — never do this:
+ALSO WRONG \u2014 never do this:
 "The Black Leather Loafers keep it grounded."
 This is wrong because "Black Leather Loafers" does not exist in the user's wardrobe. You CANNOT invent item names.
 
+ALSO WRONG \u2014 never suggest two items in the same category:
+"Wear the uploaded jacket and layer the cream tweed blazer over it."
+This is wrong because you cannot suggest two outerwear pieces. The focus item fills its slot.
+
 You must ONLY use item names that appear in the wardrobe list provided at the bottom of this prompt. If an item name is not in that list, you cannot suggest it.
 
-Format (no markdown, no asterisks, no headers, no bullet points — just natural sentences):
+Format (no markdown, no asterisks, no headers, no bullet points \u2014 just natural sentences):
 1. One sentence on the overall direction for the day.
-2. Name EVERY piece in the outfit — top, bottom, outerwear (if needed), shoes, bag/accessory. Use the EXACT item name as it appears in the wardrobe list for each piece, and briefly say why it works here.
+2. Name EVERY piece in the outfit \u2014 top, bottom, outerwear (if needed), shoes, bag/accessory. Use the EXACT item name as it appears in the wardrobe list for each piece, and briefly say why it works here.
 3. End with one specific styling tip (how to wear or style a piece).
 
 RULES:
 - ONLY use items from the wardrobe list below. If an item is not in the list, do NOT mention it.
-- Use the exact item name as written in the wardrobe. Do not rephrase, shorten, or paraphrase item names.
-- Do not use generic descriptions like "a white tee" or "dark trousers" — use the actual name.
-- If a focus item is specified, build the outfit around it.
-- Double-check every item name you write against the wardrobe list before including it.
+- When referencing item names in your prose, use the name from the wardrobe but adapt it so it reads naturally. Drop leading words like "My", "My old", "The", etc. that sound awkward in a sentence. For example, if the wardrobe name is "My black Lemaire x Uniqlo sneakers", write "the black Lemaire x Uniqlo sneakers" in your sentence. The item must still be clearly identifiable \u2014 only strip possessive/article prefixes, never change the core description.
+- Do not use generic descriptions like "a white tee" or "dark trousers" \u2014 use the actual name (cleaned up as above).
+- If a focus item is specified, build the outfit around it. The focus item fills its category slot \u2014 do NOT suggest another item from the same category (e.g. no second jacket if the focus is a jacket).
+- Double-check every item you reference against the wardrobe list before including it.
 
 {focus_note}
 
@@ -156,7 +155,7 @@ Weather: {daily_context.get("weather", "")}
 
     try:
         response = get_openai_client().chat.completions.create(
-            model=model_name,
+            model=model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.65
         )
@@ -168,8 +167,3 @@ Weather: {daily_context.get("weather", "")}
     update_last_used(user_id, item_names)
 
     return suggestion
-
-
-
-
-
