@@ -5,6 +5,12 @@ from oracle_data.models import WardrobeItem
 from io import BytesIO
 from PIL import Image, ImageOps
 
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:
+    pass
+
 
 def combine_style_summary(profile):
     appearance = profile.get("appearance", {})

@@ -1,0 +1,244 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Listing Intelligence API — Auto-tag garments for resale, in one API call</title>
+  <meta name="description" content="Structured metadata, listing copy, and semantic embeddings for apparel and luxury resale. Drop-in API for Vestiaire, The RealReal, Rebag, Grailed.">
+  <style>
+    :root {
+      --bg: #fafaf8;
+      --panel: #ffffff;
+      --ink: #111111;
+      --muted: #6b6b6b;
+      --line: #e5e5e0;
+      --accent: #111111;
+      --ok: #1a7a3e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+      font-size: 16px;
+    }
+    header { padding: 28px 24px; display: flex; justify-content: space-between; align-items: baseline; max-width: 1100px; margin: 0 auto; }
+    .brand { font-weight: 600; letter-spacing: -0.01em; font-size: 18px; }
+    .brand small { font-weight: 400; color: var(--muted); margin-left: 8px; }
+    nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-size: 14px; }
+    nav a:hover { color: var(--ink); }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px 96px; }
+
+    .hero { padding: 48px 0 56px; border-bottom: 1px solid var(--line); }
+    .hero h1 { font-size: 52px; line-height: 1.05; letter-spacing: -0.03em; font-weight: 600; margin: 0 0 20px; max-width: 860px; }
+    .hero p.lead { font-size: 20px; color: var(--muted); max-width: 680px; margin: 0 0 28px; line-height: 1.45; }
+    .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 22px; border-radius: 6px; text-decoration: none;
+      font-size: 15px; font-weight: 500; letter-spacing: 0.01em;
+    }
+    .btn.primary { background: var(--accent); color: #fff; }
+    .btn.primary:hover { background: #2a2a2a; }
+    .btn.secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    .btn.secondary:hover { background: #f2f1ed; }
+
+    .section { padding: 64px 0; border-bottom: 1px solid var(--line); }
+    .section h2 { font-size: 28px; letter-spacing: -0.02em; font-weight: 600; margin: 0 0 12px; }
+    .section p.sub { color: var(--muted); max-width: 680px; margin: 0 0 32px; }
+
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    @media (max-width: 800px) { .features { grid-template-columns: 1fr; } }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 24px; }
+    .card h3 { margin: 0 0 8px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+    .card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+    .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; margin: 0 0 8px; }
+
+    pre.code {
+      background: #0f0f0f; color: #e8e8e8; padding: 20px; border-radius: 8px;
+      overflow-x: auto; font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace;
+      font-size: 13px; line-height: 1.55; margin: 0;
+    }
+
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+    @media (max-width: 800px) { .pair { grid-template-columns: 1fr; } }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 32px; }
+    @media (max-width: 800px) { .stats { grid-template-columns: 1fr; } }
+    .stat { border-left: 2px solid var(--ink); padding-left: 16px; }
+    .stat .num { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
+    .stat .lbl { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+    .who { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 24px; }
+    @media (max-width: 800px) { .who { grid-template-columns: repeat(2, 1fr); } }
+    .who .logo {
+      border: 1px solid var(--line); border-radius: 8px; padding: 18px 12px;
+      text-align: center; font-weight: 500; color: #333; background: #fff; font-size: 13px;
+    }
+
+    footer { padding: 40px 24px 64px; color: var(--muted); font-size: 13px; text-align: center; }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Listing Intelligence API <small>by The Oracle</small></div>
+    <nav>
+      <a href="{% url 'listing_api:landing' %}">Overview</a>
+      <a href="{% url 'listing_api:demo' %}">Demo</a>
+      <a href="{% url 'listing_api:docs' %}">API docs</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <!-- HERO -->
+    <section class="hero">
+      <h1>Auto-tag garments for resale, in one API call.</h1>
+      <p class="lead">
+        Upload photos of a garment. Get back structured metadata, SEO-ready listing copy,
+        and pre-computed embeddings for semantic search — ready to drop into your
+        catalog pipeline. Built for apparel and luxury resale platforms.
+      </p>
+      <div class="cta-row">
+        <a class="btn primary" href="{% url 'listing_api:demo' %}">Try live demo →</a>
+        <a class="btn secondary" href="{% url 'listing_api:docs' %}">Read the docs</a>
+      </div>
+    </section>
+
+    <!-- WHO IT'S FOR -->
+    <section class="section">
+      <p class="eyebrow">Built for</p>
+      <h2>Apparel and luxury resale platforms</h2>
+      <p class="sub">
+        Operations teams currently spending $8–20 per item on human cataloging.
+        Cut that to pennies without losing accuracy on the fields that matter:
+        brand, silhouette, condition, material, color.
+      </p>
+      <div class="who">
+        <div class="logo">Vestiaire Collective</div>
+        <div class="logo">The RealReal</div>
+        <div class="logo">Rebag</div>
+        <div class="logo">Fashionphile</div>
+        <div class="logo">ThredUp</div>
+        <div class="logo">Grailed</div>
+        <div class="logo">Depop</div>
+        <div class="logo">Your platform</div>
+      </div>
+    </section>
+
+    <!-- WHAT YOU GET -->
+    <section class="section">
+      <p class="eyebrow">What one request returns</p>
+      <h2>Three things in one round-trip</h2>
+      <p class="sub">No stitching together four vendors. Metadata, copy, and embeddings — all from the same understanding of the garment.</p>
+      <div class="features">
+        <div class="card">
+          <h3>1. Structured metadata</h3>
+          <p>
+            Category, subcategory, silhouette, primary + secondary colors, pattern,
+            material, brand (normalized), size label, condition grade, era estimate,
+            style tags. Every enum field is drawn from a controlled vocabulary — no
+            synonym sprawl.
+          </p>
+        </div>
+        <div class="card">
+          <h3>2. Listing copy</h3>
+          <p>
+            Title (SEO-length), 3–5 sentence description in resale-house style,
+            and 15–25 search-optimized tags. Factual only — never invents details
+            the photos don't support.
+          </p>
+        </div>
+        <div class="card">
+          <h3>3. Embeddings</h3>
+          <p>
+            Pre-computed <code>BGE-base</code> text embedding (768d) and
+            <code>CLIP ViT-B/32</code> image embedding (512d). Drop into pgvector,
+            Pinecone, or Weaviate for "find similar listings" and visual search.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXAMPLE -->
+    <section class="section">
+      <p class="eyebrow">One request</p>
+      <h2>POST multipart, get JSON back</h2>
+      <div class="pair">
+<pre class="code">curl -X POST https://theoracle.up.railway.app/listing/api/v1/analyze/ \
+  -H "Authorization: Bearer sk_live_..." \
+  -F "images=@front.jpg"  -F "images=@label.jpg" -F "images=@detail.jpg" \
+  -F "roles=front,label,detail" \
+  -F "hint=Saint Laurent oversized wool coat"</pre>
+<pre class="code">{
+  "metadata": {
+    "category": "Outerwear",
+    "subcategory": "Wool Coat",
+    "brand": "Saint Laurent",
+    "brand_known": true,
+    "primary_material": "wool",
+    "silhouette": ["oversized", "double-breasted"],
+    "primary_color": "black",
+    "condition": "excellent",
+    "style_tags": ["quiet-luxury", "investment", "classic"],
+    ...
+  },
+  "listing": {
+    "title": "Saint Laurent Oversized Black Wool Coat",
+    "description": "Saint Laurent oversized wool coat ...",
+    "tags": ["saint-laurent", "wool-coat", ...]
+  },
+  "embeddings": {
+    "text":  { "model": "BAAI/bge-base-en-v1.5", "dim": 768, "vector": [...] },
+    "image": { "model": "clip-ViT-B-32",         "dim": 512, "vector": [...] }
+  }
+}</pre>
+      </div>
+    </section>
+
+    <!-- WHY -->
+    <section class="section">
+      <p class="eyebrow">Why it's different</p>
+      <h2>Controlled vocabularies, not synonym soup</h2>
+      <p class="sub">
+        Most vision-tagging tools free-generate labels. You end up with
+        <em>"ivory"</em>, <em>"cream"</em>, <em>"off-white"</em>, and <em>"winter white"</em> for
+        the same garment. That breaks filters and faceted search. Every enum field
+        here is drawn from a fixed, editable taxonomy — so your catalog stays clean
+        while embeddings handle the nuance.
+      </p>
+      <div class="stats">
+        <div class="stat">
+          <div class="num">~12s</div>
+          <div class="lbl">typical latency, 3 images, embeddings included</div>
+        </div>
+        <div class="stat">
+          <div class="num">76</div>
+          <div class="lbl">pre-loaded luxury + contemporary brands (normalized)</div>
+        </div>
+        <div class="stat">
+          <div class="num">1–6</div>
+          <div class="lbl">images per garment, role-aware prompting</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section class="section" style="border-bottom:none">
+      <h2>See it on your own inventory</h2>
+      <p class="sub">Try the live demo with your photos, or get in touch for a pilot.</p>
+      <div class="cta-row">
+        <a class="btn primary" href="{% url 'listing_api:demo' %}">Try the live demo →</a>
+        <a class="btn secondary" href="mailto:eumiejhong@gmail.com?subject=Listing%20Intelligence%20API%20-%20Pilot">Request a pilot</a>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Built on The Oracle · <a href="mailto:eumiejhong@gmail.com">Contact</a>
+  </footer>
+</body>
+</html>

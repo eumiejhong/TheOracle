@@ -1,0 +1,364 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>API Docs — Listing Intelligence API</title>
+  <style>
+    :root {
+      --bg: #fafaf8; --panel: #ffffff; --ink: #111111; --muted: #6b6b6b;
+      --line: #e5e5e0; --accent: #111111; --code-bg: #0f0f0f; --code-ink: #e8e8e8;
+      --sidebar: #f3f2ee;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; font-size: 15px; }
+    header { padding: 24px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; }
+    .brand { font-weight: 600; letter-spacing: -0.01em; font-size: 17px; }
+    .brand small { font-weight: 400; color: var(--muted); margin-left: 8px; }
+    nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-size: 14px; }
+    nav a:hover { color: var(--ink); }
+
+    .layout { display: grid; grid-template-columns: 240px 1fr; gap: 0; min-height: 100vh; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+    aside {
+      background: var(--sidebar); border-right: 1px solid var(--line);
+      padding: 32px 24px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    }
+    @media (max-width: 900px) { aside { position: static; height: auto; } }
+    aside h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+    aside ul { list-style: none; padding: 0; margin: 0 0 24px; }
+    aside li { margin: 6px 0; }
+    aside a { color: var(--ink); text-decoration: none; font-size: 14px; }
+    aside a:hover { text-decoration: underline; }
+
+    main { padding: 48px 48px 96px; max-width: 900px; }
+    @media (max-width: 900px) { main { padding: 32px 24px; } }
+
+    h1 { font-size: 36px; letter-spacing: -0.02em; font-weight: 600; margin: 0 0 8px; }
+    h2 { font-size: 22px; letter-spacing: -0.01em; font-weight: 600; margin: 48px 0 12px; padding-top: 12px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 10px; }
+    .lede { color: var(--muted); font-size: 17px; margin: 0 0 24px; }
+    p { margin: 0 0 14px; }
+    code { background: #efede6; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 13px; }
+    pre.code {
+      background: var(--code-bg); color: var(--code-ink); padding: 18px; border-radius: 6px;
+      overflow-x: auto; font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 13px; line-height: 1.55; margin: 12px 0 20px;
+    }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0 20px; font-size: 14px; }
+    th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 10px 8px; vertical-align: top; }
+    th { background: var(--panel); font-weight: 600; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    td code { font-size: 12px; }
+
+    .enum-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px; }
+    .enum-list code { background: var(--panel); border: 1px solid var(--line); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+
+    .note {
+      background: #fffbea; border: 1px solid #f0d88a; padding: 12px 16px;
+      border-radius: 6px; color: #5a4800; margin: 12px 0 20px; font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Listing Intelligence API <small>by The Oracle</small></div>
+    <nav>
+      <a href="{% url 'listing_api:landing' %}">Overview</a>
+      <a href="{% url 'listing_api:demo' %}">Demo</a>
+      <a href="{% url 'listing_api:docs' %}">API docs</a>
+    </nav>
+  </header>
+
+  <div class="layout">
+    <aside>
+      <h4>Getting started</h4>
+      <ul>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#auth">Authentication</a></li>
+        <li><a href="#rate-limits">Rate limits</a></li>
+      </ul>
+      <h4>Endpoints</h4>
+      <ul>
+        <li><a href="#analyze">POST /analyze</a></li>
+        <li><a href="#health">GET /health</a></li>
+      </ul>
+      <h4>Reference</h4>
+      <ul>
+        <li><a href="#response-schema">Response schema</a></li>
+        <li><a href="#embeddings">Embeddings</a></li>
+        <li><a href="#enums">Controlled vocabularies</a></li>
+        <li><a href="#errors">Error codes</a></li>
+      </ul>
+      <h4>Examples</h4>
+      <ul>
+        <li><a href="#curl">curl</a></li>
+        <li><a href="#python">Python</a></li>
+        <li><a href="#node">Node.js</a></li>
+      </ul>
+    </aside>
+
+    <main>
+      <h1>API Docs</h1>
+      <p class="lede">REST API for automatic garment analysis. Multipart image upload → structured JSON.</p>
+
+      <!-- OVERVIEW -->
+      <h2 id="overview">Overview</h2>
+      <p>
+        <strong>Base URL:</strong> <code>https://theoracle.up.railway.app/listing</code><br>
+        <strong>Content-Type:</strong> <code>multipart/form-data</code><br>
+        <strong>Response:</strong> <code>application/json</code>
+      </p>
+      <p>
+        One endpoint — <code>POST /api/v1/analyze/</code> — takes 1–6 photos of a single garment and returns
+        structured metadata, SEO listing copy, and pre-computed embeddings. Typical latency: 10–20s for
+        3 images with embeddings included.
+      </p>
+
+      <!-- AUTH -->
+      <h2 id="auth">Authentication</h2>
+      <p>All API requests require an API key. Send it in either header:</p>
+<pre class="code">Authorization: Bearer sk_live_...
+# or
+X-API-Key: sk_live_...</pre>
+      <div class="note">
+        API keys are currently issued manually during our pilot phase. Email
+        <a href="mailto:eumiejhong@gmail.com">eumiejhong@gmail.com</a> to request one.
+      </div>
+
+      <!-- RATE LIMITS -->
+      <h2 id="rate-limits">Rate limits</h2>
+      <p>
+        Limits are per-key and configurable. Defaults: <strong>30 requests/minute</strong>,
+        <strong>5,000 requests/day</strong>. Exceeding them returns <code>429 Too Many Requests</code>
+        with a <code>Retry-After</code> header.
+      </p>
+
+      <!-- ANALYZE -->
+      <h2 id="analyze">POST /api/v1/analyze/</h2>
+      <p>Analyze 1–6 photos of a single garment.</p>
+
+      <h3>Request — multipart form fields</h3>
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>images</code></td><td>file[]</td><td>Yes</td><td>1–6 image files. JPEG, PNG, or HEIC. ≤10MB each.</td></tr>
+          <tr><td><code>roles</code></td><td>string (CSV)</td><td>No</td><td>Comma-separated roles matching <code>images</code> order. Allowed: <code>{{ image_roles|join:", " }}</code>. Defaults: first image <code>front</code>, rest <code>detail</code>.</td></tr>
+          <tr><td><code>hint</code></td><td>string</td><td>No</td><td>Free-text hint (e.g. "Saint Laurent wool coat, IT 40"). Used as soft guidance; may be overridden if the image disagrees.</td></tr>
+          <tr><td><code>include_embeddings</code></td><td>bool</td><td>No</td><td>Default <code>true</code>. Set <code>false</code> to skip BGE + CLIP embeddings (saves ~1s).</td></tr>
+          <tr><td><code>include_copy</code></td><td>bool</td><td>No</td><td>Default <code>true</code>. Set <code>false</code> to skip listing copy generation.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Response — 200 OK</h3>
+      <p>See <a href="#response-schema">Response schema</a> below for all fields.</p>
+
+      <!-- HEALTH -->
+      <h2 id="health">GET /api/v1/health/</h2>
+      <p>Health check. Returns <code>{ "status": "ok", "service": "listing_api" }</code>. No auth required.</p>
+
+      <!-- SCHEMA -->
+      <h2 id="response-schema">Response schema</h2>
+<pre class="code">{
+  "metadata": {
+    "category":            "Outerwear",           // one of CATEGORIES
+    "subcategory":         "Wool Coat",           // scoped to category
+    "silhouette":          ["oversized", "double-breasted"],
+    "primary_color":       "black",
+    "secondary_colors":    ["ivory"],
+    "color_palette":       "neutral",
+    "pattern":             "solid",
+    "primary_material":    "wool",
+    "material_raw":        "double-faced wool",   // free text if visible
+    "material_confidence": "high",                // high | medium | low
+    "brand":               "Saint Laurent",       // canonical name
+    "brand_confidence":    "medium",
+    "brand_known":         true,                  // true if matched our brand dictionary
+    "size_label":          "IT 40",               // raw label text or null
+    "condition":           "excellent",           // grade key
+    "condition_notes":     "No visible flaws.",
+    "era_estimate":        "2015-2020",           // or null
+    "style_tags":          ["quiet-luxury", "investment", "classic"],
+    "style_descriptors":   ["elevated minimalism", "quiet luxury staple"],
+    "key_details":         ["horn buttons", "raglan sleeves"]
+  },
+  "listing": {
+    "title":       "Saint Laurent Oversized Black Wool Coat",
+    "description": "Saint Laurent wool coat in black...",
+    "tags":        ["saint-laurent", "wool-coat", "oversized", ...],
+    "source":      "llm"           // "llm" or "template_fallback"
+  },
+  "embeddings": {
+    "text":  { "model": "BAAI/bge-base-en-v1.5", "dim": 768, "vector": [...], "source_text": "..." },
+    "image": { "model": "clip-ViT-B-32",         "dim": 512, "vector": [...], "source_image_role": "front" }
+  },
+  "usage": {
+    "elapsed_ms":    12345,
+    "model":         "gpt-5.4",
+    "input_tokens":  2800,
+    "output_tokens": 520,
+    "image_count":   3
+  }
+}</pre>
+
+      <!-- EMBEDDINGS -->
+      <h2 id="embeddings">Embeddings usage guide</h2>
+      <p>Both vectors are L2-normalized, so cosine similarity reduces to a dot product.</p>
+
+      <h3>Text embedding</h3>
+      <ul>
+        <li>Model: <code>BAAI/bge-base-en-v1.5</code></li>
+        <li>Dim: 768</li>
+        <li>What's embedded: <code>style_descriptors</code> + generated listing <code>description</code></li>
+        <li>Use for: "find similar listings" text queries, clustering by aesthetic, deduplication</li>
+      </ul>
+
+      <h3>Image embedding</h3>
+      <ul>
+        <li>Model: <code>clip-ViT-B-32</code> (OpenAI CLIP via sentence-transformers)</li>
+        <li>Dim: 512</li>
+        <li>What's embedded: the <code>front</code> image (or first image if no role given)</li>
+        <li>Use for: visual similarity search, "more like this", customer-photo matching</li>
+      </ul>
+
+      <h3>Storage</h3>
+      <p>Store as <code>float4[]</code> in Postgres with <code>pgvector</code>, or push to Pinecone/Weaviate. Example (pgvector):</p>
+<pre class="code">CREATE TABLE listings (
+  id           bigserial PRIMARY KEY,
+  metadata     jsonb NOT NULL,
+  text_vec     vector(768),
+  image_vec    vector(512)
+);
+CREATE INDEX ON listings USING ivfflat (text_vec  vector_cosine_ops);
+CREATE INDEX ON listings USING ivfflat (image_vec vector_cosine_ops);</pre>
+
+      <!-- ENUMS -->
+      <h2 id="enums">Controlled vocabularies</h2>
+      <p>
+        Every enum field in the response is drawn from these lists. The API will never
+        return a value outside them. Free-text fields (<code>material_raw</code>,
+        <code>condition_notes</code>, <code>style_descriptors</code>, <code>key_details</code>)
+        are grounded in the image but unconstrained.
+      </p>
+
+      <h3>category</h3>
+      <div class="enum-list">{% for c in categories %}<code>{{ c }}</code>{% endfor %}</div>
+
+      <h3>silhouette (pick 1–4)</h3>
+      <div class="enum-list">{% for s in silhouettes %}<code>{{ s }}</code>{% endfor %}</div>
+
+      <h3>primary_color / secondary_colors</h3>
+      <div class="enum-list">{% for c in colors_primary %}<code>{{ c }}</code>{% endfor %}</div>
+
+      <h3>color_palette</h3>
+      <div class="enum-list">{% for p in color_palettes %}<code>{{ p }}</code>{% endfor %}</div>
+
+      <h3>pattern</h3>
+      <div class="enum-list">{% for p in patterns %}<code>{{ p }}</code>{% endfor %}</div>
+
+      <h3>primary_material</h3>
+      <div class="enum-list">{% for m in materials %}<code>{{ m }}</code>{% endfor %}</div>
+
+      <h3>condition</h3>
+      <table>
+        <thead><tr><th>key</th><th>description</th></tr></thead>
+        <tbody>
+        {% for key, desc in condition_grades %}
+          <tr><td><code>{{ key }}</code></td><td>{{ desc }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+
+      <h3>era_estimate</h3>
+      <div class="enum-list">{% for e in era_estimates %}<code>{{ e }}</code>{% endfor %}</div>
+
+      <h3>style_tags (pick 3–5)</h3>
+      <div class="enum-list">{% for t in style_tags %}<code>{{ t }}</code>{% endfor %}</div>
+
+      <h3>Brands</h3>
+      <p>
+        {{ brand_count }} brands are pre-loaded with alias normalization
+        (<code>YSL</code> → <code>Saint Laurent</code>, <code>CDG</code> →
+        <code>Comme des Garçons</code>, etc.). Unknown brands pass through with
+        <code>brand_known: false</code>.
+      </p>
+
+      <h3>image_roles</h3>
+      <div class="enum-list">{% for r in image_roles %}<code>{{ r }}</code>{% endfor %}</div>
+
+      <!-- ERRORS -->
+      <h2 id="errors">Error codes</h2>
+      <table>
+        <thead><tr><th>HTTP</th><th>code</th><th>when</th></tr></thead>
+        <tbody>
+          <tr><td>400</td><td><code>invalid_request</code></td><td>Missing or malformed input (no images, too many images, invalid role)</td></tr>
+          <tr><td>401</td><td><code>not_authenticated</code></td><td>Missing or invalid API key</td></tr>
+          <tr><td>403</td><td><code>key_revoked</code></td><td>API key has been deactivated</td></tr>
+          <tr><td>422</td><td><code>analysis_failed</code></td><td>Image could not be decoded, or vision model returned invalid JSON</td></tr>
+          <tr><td>429</td><td><code>rate_limited</code></td><td>Per-minute or per-day limit exceeded</td></tr>
+          <tr><td>500</td><td><code>internal_error</code></td><td>Unexpected server error</td></tr>
+        </tbody>
+      </table>
+
+      <!-- EXAMPLES -->
+      <h2 id="curl">curl</h2>
+<pre class="code">curl -X POST https://theoracle.up.railway.app/listing/api/v1/analyze/ \
+  -H "Authorization: Bearer sk_live_..." \
+  -F "images=@front.jpg" \
+  -F "images=@label.jpg" \
+  -F "images=@detail.jpg" \
+  -F "roles=front,label,detail" \
+  -F "hint=Saint Laurent wool coat" \
+  -F "include_embeddings=true"</pre>
+
+      <h2 id="python">Python</h2>
+<pre class="code">import requests
+
+r = requests.post(
+    "https://theoracle.up.railway.app/listing/api/v1/analyze/",
+    headers={"Authorization": "Bearer sk_live_..."},
+    files=[
+        ("images", ("front.jpg",  open("front.jpg",  "rb"), "image/jpeg")),
+        ("images", ("label.jpg",  open("label.jpg",  "rb"), "image/jpeg")),
+        ("images", ("detail.jpg", open("detail.jpg", "rb"), "image/jpeg")),
+    ],
+    data={
+        "roles": "front,label,detail",
+        "hint": "Saint Laurent wool coat",
+        "include_embeddings": "true",
+    },
+    timeout=60,
+)
+r.raise_for_status()
+result = r.json()
+
+print(result["metadata"]["brand"], "/", result["metadata"]["subcategory"])
+print(result["listing"]["title"])</pre>
+
+      <h2 id="node">Node.js</h2>
+<pre class="code">import fs from "node:fs";
+import FormData from "form-data";
+import fetch from "node-fetch";
+
+const form = new FormData();
+form.append("images", fs.createReadStream("front.jpg"));
+form.append("images", fs.createReadStream("label.jpg"));
+form.append("images", fs.createReadStream("detail.jpg"));
+form.append("roles", "front,label,detail");
+form.append("hint", "Saint Laurent wool coat");
+
+const res = await fetch(
+  "https://theoracle.up.railway.app/listing/api/v1/analyze/",
+  {
+    method: "POST",
+    headers: { Authorization: "Bearer sk_live_..." },
+    body: form,
+  },
+);
+const data = await res.json();
+console.log(data.metadata.brand, "/", data.metadata.subcategory);</pre>
+
+    </main>
+  </div>
+</body>
+</html>

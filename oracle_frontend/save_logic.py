@@ -4,15 +4,8 @@ from oracle_data.models import UserStyleProfile, DailyStyleInput
 from oracle_frontend.utils import combine_style_summary
 from oracle_frontend.archetype_generator import generate_style_archetype, generate_today_styling_suggestion
 from oracle_frontend.ai_config import OPENAI_MODEL
+from oracle_frontend.embeddings import embed_text_bytes, get_bge_model  # noqa: F401  (re-exported for back-compat)
 
-_bge = None
-
-def get_bge_model():
-    global _bge
-    if _bge is None:
-        from sentence_transformers import SentenceTransformer
-        _bge = SentenceTransformer("BAAI/bge-base-en-v1.5")
-    return _bge
 
 def save_style_profile(profile: dict, user_id: str):
     appearance = profile["appearance"]
@@ -21,12 +14,10 @@ def save_style_profile(profile: dict, user_id: str):
 
     summary = combine_style_summary(profile)
 
-    embedding_bytes = None
-    try:
-        embedding = get_bge_model().encode(summary, normalize_embeddings=True)
-        embedding_bytes = embedding.tobytes()
-    except Exception as e:
-        print(f"[PROFILE] Embedding skipped (non-critical): {e}")
+    embedding_bytes = embed_text_bytes(summary)
+    if not embedding_bytes:
+        print("[PROFILE] Embedding skipped (non-critical)")
+        embedding_bytes = None
 
     style_archetype = generate_style_archetype(summary, user_id)
     print("📜 Archetype response:", style_archetype)

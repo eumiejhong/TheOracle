@@ -45,6 +45,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'oracle_api',
+
+    # B2B Listing Intelligence API
+    'listing_api',
 ]
 
 MIDDLEWARE = [

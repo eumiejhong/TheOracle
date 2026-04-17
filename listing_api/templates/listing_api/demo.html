@@ -1,0 +1,308 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Listing Intelligence API — Live Demo</title>
+  <style>
+    :root {
+      --bg: #fafaf8;
+      --panel: #ffffff;
+      --ink: #111111;
+      --muted: #6b6b6b;
+      --line: #e5e5e0;
+      --accent: #111111;
+      --code-bg: #0f0f0f;
+      --code-ink: #e8e8e8;
+      --ok: #1a7a3e;
+      --err: #b1361b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+      font-size: 15px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px 96px; }
+    header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 32px; }
+    .brand { font-weight: 600; letter-spacing: -0.01em; font-size: 18px; }
+    .brand small { font-weight: 400; color: var(--muted); margin-left: 8px; }
+    nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-size: 14px; }
+    nav a:hover { color: var(--ink); }
+
+    h1 { font-size: 28px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.02em; }
+    .subtitle { color: var(--muted); margin: 0 0 32px; max-width: 640px; }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .panel h2 { font-size: 16px; font-weight: 600; margin: 0 0 16px; letter-spacing: -0.01em; }
+    .panel h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 24px 0 8px; }
+
+    label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+    input[type="text"], input[type="file"], textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      background: var(--bg);
+    }
+    input[type="file"] { padding: 8px; }
+    textarea { resize: vertical; min-height: 60px; }
+    .field { margin-bottom: 16px; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+    .helper { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    button.primary {
+      background: var(--accent); color: white; border: 0; border-radius: 6px;
+      padding: 12px 20px; font-size: 14px; font-weight: 500;
+      cursor: pointer; letter-spacing: 0.01em;
+    }
+    button.primary:hover { background: #2a2a2a; }
+    button.primary:disabled { opacity: 0.6; cursor: wait; }
+
+    .error {
+      background: #fdf2ee; border: 1px solid #f4c4b1; color: var(--err);
+      padding: 12px 16px; border-radius: 6px; margin-bottom: 24px; font-size: 14px;
+    }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+
+    .kv { display: grid; grid-template-columns: 160px 1fr; row-gap: 8px; column-gap: 16px; font-size: 14px; }
+    .kv .k { color: var(--muted); font-size: 13px; }
+    .kv .v { font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace; font-size: 13px; word-break: break-word; }
+    .kv .v.text { font-family: inherit; font-size: 14px; }
+
+    .pill {
+      display: inline-block; padding: 2px 8px; border: 1px solid var(--line);
+      border-radius: 999px; font-size: 12px; margin: 0 4px 4px 0;
+      background: var(--bg);
+    }
+    .pill.tag { background: #f0eef0; border-color: #e0dde0; }
+    .pill.brand-known { background: #e6f4ec; border-color: #b8dec5; color: var(--ok); }
+    .pill.brand-unknown { background: #f7efe7; border-color: #e8d5b8; color: #8a5a1a; }
+
+    pre.code {
+      background: var(--code-bg); color: var(--code-ink);
+      padding: 16px; border-radius: 6px; overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace;
+      font-size: 12px; line-height: 1.5; margin: 0;
+    }
+    .listing-title { font-size: 18px; font-weight: 600; margin: 0 0 8px; }
+    .listing-desc { color: #2a2a2a; margin: 0 0 12px; }
+
+    details { margin-top: 12px; }
+    summary { cursor: pointer; color: var(--muted); font-size: 13px; user-select: none; }
+    summary:hover { color: var(--ink); }
+
+    .embed-row { display: flex; align-items: baseline; gap: 12px; font-size: 13px; margin-bottom: 6px; }
+    .embed-row .label { font-weight: 600; color: var(--ink); }
+    .embed-row .meta { color: var(--muted); font-family: ui-monospace, monospace; font-size: 12px; }
+
+    .meta-bar { display: flex; gap: 24px; flex-wrap: wrap; padding: 12px 16px; background: #f3f2ee; border-radius: 6px; margin-bottom: 24px; font-size: 13px; color: var(--muted); }
+    .meta-bar strong { color: var(--ink); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">Listing Intelligence API <small>by The Oracle</small></div>
+      <nav>
+        <a href="{% url 'listing_api:landing' %}">Overview</a>
+        <a href="{% url 'listing_api:demo' %}">Demo</a>
+      </nav>
+    </header>
+
+    <h1>Live demo</h1>
+    <p class="subtitle">
+      Upload 1–{{ max_images }} photos of a single garment. We return structured metadata,
+      SEO-ready listing copy, and pre-computed embeddings for semantic search — in a single API call.
+    </p>
+
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="panel" id="upload-form">
+      {% csrf_token %}
+      <h2>1. Upload images</h2>
+      <div class="field">
+        <label for="images">Images (up to {{ max_images }})</label>
+        <input type="file" id="images" name="images" accept="image/*" multiple required>
+        <div class="helper">JPEG, PNG, HEIC. Up to 10MB each. Order: front, back, label, detail, worn, damage.</div>
+      </div>
+      <div class="field">
+        <label for="roles">Image roles (comma-separated, optional)</label>
+        <input type="text" id="roles" name="roles" placeholder="front, label, detail" value="">
+        <div class="helper">
+          Allowed: {{ image_roles|join:", " }}. Defaults to <code>front</code> for the first image and <code>detail</code> for the rest.
+        </div>
+      </div>
+      <div class="field">
+        <label for="hint">Hint (optional free text)</label>
+        <textarea id="hint" name="hint" placeholder="e.g. Saint Laurent oversized wool coat, size IT 40">{{ submitted_hint }}</textarea>
+      </div>
+      <div class="field">
+        <label class="checkbox-row">
+          <input type="checkbox" name="include_embeddings" value="true"
+            {% if submitted_include_embeddings != False %}checked{% endif %}>
+          Include embeddings (BGE text + CLIP image)
+        </label>
+      </div>
+      <button class="primary" type="submit" id="submit-btn">Analyze</button>
+    </form>
+
+    {% if metadata %}
+      {% with meta=metadata %}
+        <div class="meta-bar">
+          <span><strong>{{ run_meta.elapsed_ms }}ms</strong> total</span>
+          <span>analyzer: <strong>{{ analyzer_meta.elapsed_ms }}ms</strong> · {{ analyzer_meta.model }}</span>
+          {% if copy_meta.elapsed_ms %}
+            <span>copy: <strong>{{ copy_meta.elapsed_ms }}ms</strong></span>
+          {% endif %}
+          <span>tokens: <strong>{{ analyzer_meta.input_tokens|add:analyzer_meta.output_tokens }}</strong></span>
+        </div>
+
+        <div class="grid">
+          <div class="panel">
+            <h2>Structured metadata</h2>
+            <div class="kv">
+              <div class="k">category</div>
+              <div class="v">{{ meta.category }} / {{ meta.subcategory }}</div>
+
+              <div class="k">brand</div>
+              <div class="v">
+                {% if meta.brand %}{{ meta.brand }}{% else %}<em>—</em>{% endif %}
+                {% if meta.brand %}
+                  {% if meta.brand_known %}
+                    <span class="pill brand-known">known · {{ meta.brand_confidence }}</span>
+                  {% else %}
+                    <span class="pill brand-unknown">unknown · {{ meta.brand_confidence }}</span>
+                  {% endif %}
+                {% endif %}
+              </div>
+
+              <div class="k">material</div>
+              <div class="v">
+                {{ meta.primary_material }}
+                {% if meta.material_raw %} <span class="pill">{{ meta.material_raw }}</span>{% endif %}
+                <span class="pill">{{ meta.material_confidence }}</span>
+              </div>
+
+              <div class="k">colors</div>
+              <div class="v">
+                {{ meta.primary_color }}
+                {% for c in meta.secondary_colors %} <span class="pill">{{ c }}</span>{% endfor %}
+                <span class="pill">{{ meta.color_palette }}</span>
+              </div>
+
+              <div class="k">pattern</div>
+              <div class="v">{{ meta.pattern }}</div>
+
+              <div class="k">silhouette</div>
+              <div class="v">
+                {% for s in meta.silhouette %}<span class="pill">{{ s }}</span>{% endfor %}
+              </div>
+
+              <div class="k">size_label</div>
+              <div class="v">{{ meta.size_label|default:"—" }}</div>
+
+              <div class="k">condition</div>
+              <div class="v">
+                {{ meta.condition }}
+                {% if meta.condition_notes %}
+                  <div class="helper" style="margin-top:4px">{{ meta.condition_notes }}</div>
+                {% endif %}
+              </div>
+
+              <div class="k">era</div>
+              <div class="v">{{ meta.era_estimate|default:"—" }}</div>
+
+              <div class="k">style_tags</div>
+              <div class="v">
+                {% for t in meta.style_tags %}<span class="pill tag">{{ t }}</span>{% endfor %}
+              </div>
+
+              <div class="k">style_descriptors</div>
+              <div class="v text">
+                {% for d in meta.style_descriptors %}<span class="pill">{{ d }}</span>{% endfor %}
+              </div>
+
+              <div class="k">key_details</div>
+              <div class="v text">
+                {% for d in meta.key_details %}<span class="pill">{{ d }}</span>{% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2>Generated listing copy</h2>
+            {% if listing %}
+              <div class="listing-title">{{ listing.title }}</div>
+              <p class="listing-desc">{{ listing.description }}</p>
+              <h3>Tags</h3>
+              <div>
+                {% for t in listing.tags %}<span class="pill tag">{{ t }}</span>{% endfor %}
+              </div>
+              <div class="helper" style="margin-top:12px">
+                source: <code>{{ listing.source }}</code>
+              </div>
+            {% else %}
+              <p class="helper">Copy generation was disabled for this request.</p>
+            {% endif %}
+
+            {% if display_embeddings %}
+              <h3>Embeddings</h3>
+              {% if display_embeddings.text %}
+                <div class="embed-row">
+                  <span class="label">text</span>
+                  <span class="meta">{{ display_embeddings.text.model }} · {{ display_embeddings.text.dim }}d</span>
+                </div>
+                <pre class="code">[{{ display_embeddings.text.preview|join:", " }}, ...]</pre>
+                <details>
+                  <summary>Show full vector ({{ display_embeddings.text.dim }} floats)</summary>
+                  <pre class="code">{{ display_embeddings.text.vector_full_json }}</pre>
+                </details>
+              {% endif %}
+              {% if display_embeddings.image %}
+                <div class="embed-row" style="margin-top:12px">
+                  <span class="label">image</span>
+                  <span class="meta">{{ display_embeddings.image.model }} · {{ display_embeddings.image.dim }}d</span>
+                </div>
+                <pre class="code">[{{ display_embeddings.image.preview|join:", " }}, ...]</pre>
+                <details>
+                  <summary>Show full vector ({{ display_embeddings.image.dim }} floats)</summary>
+                  <pre class="code">{{ display_embeddings.image.vector_full_json }}</pre>
+                </details>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Raw JSON response</h2>
+          <pre class="code">{{ result_json }}</pre>
+        </div>
+      {% endwith %}
+    {% endif %}
+  </div>
+
+  <script>
+    document.getElementById('upload-form').addEventListener('submit', function() {
+      var btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.innerText = 'Analyzing… (~10–20s on first call)';
+    });
+  </script>
+</body>
+</html>
