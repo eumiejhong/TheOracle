@@ -77,11 +77,15 @@
 
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+    /* Allow grid children to shrink below their content's intrinsic width.
+       Without this, the full embedding vector <pre> blows out the column. */
+    .grid > .panel { min-width: 0; }
 
-    .kv { display: grid; grid-template-columns: 160px 1fr; row-gap: 8px; column-gap: 16px; font-size: 14px; }
+    .kv { display: grid; grid-template-columns: 140px minmax(0, 1fr); row-gap: 10px; column-gap: 16px; font-size: 14px; }
+    @media (max-width: 480px) { .kv { grid-template-columns: 1fr; row-gap: 4px; } .kv .k { margin-top: 8px; } }
     .kv .k { color: var(--muted); font-size: 13px; }
-    .kv .v { font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace; font-size: 13px; word-break: break-word; }
-    .kv .v.text { font-family: inherit; font-size: 14px; }
+    .kv .v { font-size: 14px; word-break: break-word; min-width: 0; }
+    .kv .v code { font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace; font-size: 12px; background: #efede6; padding: 1px 5px; border-radius: 3px; }
 
     .pill {
       display: inline-block; padding: 2px 8px; border: 1px solid var(--line);
@@ -97,7 +101,10 @@
       padding: 16px; border-radius: 6px; overflow-x: auto;
       font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace;
       font-size: 12px; line-height: 1.5; margin: 0;
+      max-width: 100%;
+      white-space: pre;
     }
+    pre.code.wrap { white-space: pre-wrap; word-break: break-all; }
     .listing-title { font-size: 18px; font-weight: 600; margin: 0 0 8px; }
     .listing-desc { color: #2a2a2a; margin: 0 0 12px; }
 
