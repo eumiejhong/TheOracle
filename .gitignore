@@ -36,3 +36,8 @@ mobile/node_modules/
 
 # Model cache
 .cache/
+
+# Eval dataset photos & generated reports (re-scraped on demand)
+listing_api/eval/items/*/
+listing_api/eval/results/
+!listing_api/eval/items/.gitkeep

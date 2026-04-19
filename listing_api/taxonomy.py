@@ -183,7 +183,7 @@ BRAND_ALIASES: dict[str, list[str]] = {
     "Maison Margiela": ["Margiela", "MM6", "Maison Martin Margiela", "MMM"],
     "Bottega Veneta": ["Bottega"],
     "Balenciaga": ["BB"],
-    "Christian Dior": ["Dior", "Dior Homme"],
+    "Christian Dior": ["Dior", "Dior Homme", "Christian Dior Monsieur", "Dior Monsieur", "Dior Sport"],
     "Givenchy": [],
     "Louis Vuitton": ["LV"],
     "Gucci": [],
@@ -197,11 +197,13 @@ BRAND_ALIASES: dict[str, list[str]] = {
     "Toteme": [],
     "Lemaire": [],
     "Jil Sander": [],
+    "A.P.C.": ["APC", "A P C", "A.P.C"],
+    "C.P. Company": ["CP Company", "C P Company"],
     "Acne Studios": ["Acne"],
     "Phoebe Philo": [],
     "Céline": ["Celine", "Old Celine", "Phoebe Philo Celine"],
     "Valentino": [],
-    "Burberry": ["Burberry London", "Burberry Prorsum"],
+    "Burberry": ["Burberry London", "Burberry Prorsum", "Burberrys", "Burberrys of London"],
     "Stella McCartney": [],
     "Alexander McQueen": ["McQueen"],
     "Alexander Wang": [],
@@ -237,6 +239,7 @@ BRAND_ALIASES: dict[str, list[str]] = {
     "Tommy Hilfiger": ["Tommy"],
     "Calvin Klein": ["CK"],
     "Levi's": ["Levis"],
+    "G-Star": ["G-Star RAW", "G Star", "GStar"],
     "Carhartt": ["Carhartt WIP"],
     "Stone Island": [],
     "Patagonia": [],
@@ -270,7 +273,13 @@ def all_known_brands() -> set[str]:
 def normalize_brand(raw: str | None) -> tuple[str, bool]:
     """Map a free-text brand string to its canonical name.
 
-    Returns (canonical_name, was_known). If the brand isn't in the dictionary,
+    Match priority:
+      1. exact match on canonical name or any alias (case-insensitive)
+      2. substring/prefix match — if the raw string starts with or contains a
+         canonical name (e.g. "Christian Dior Monsieur" -> "Christian Dior"
+         when no exact alias was registered)
+
+    Returns (canonical_name, was_known). If the brand isn't matched,
     returns the raw string unchanged with was_known=False.
     """
     if not raw:
@@ -279,12 +288,31 @@ def normalize_brand(raw: str | None) -> tuple[str, bool]:
     if not raw_norm:
         return "", False
     raw_lower = raw_norm.lower()
+
+    # Pass 1: exact match against canonical or any alias
     for canonical, aliases in BRAND_ALIASES.items():
         if raw_lower == canonical.lower():
             return canonical, True
         for a in aliases:
             if raw_lower == a.lower():
                 return canonical, True
+
+    # Pass 2: substring/prefix match. Prefer the longest canonical name that
+    # appears as a whole-word match in the raw string (so "Christian Dior
+    # Monsieur" -> "Christian Dior", not "Dior").
+    best_canonical = None
+    best_len = 0
+    for canonical in BRAND_ALIASES.keys():
+        c_lower = canonical.lower()
+        # Whole-word boundary check (rough): wrap in spaces
+        if f" {c_lower} " in f" {raw_lower} " or raw_lower.startswith(c_lower + " ") \
+                or raw_lower.endswith(" " + c_lower):
+            if len(c_lower) > best_len:
+                best_canonical = canonical
+                best_len = len(c_lower)
+    if best_canonical:
+        return best_canonical, True
+
     return raw_norm, False
 
 
