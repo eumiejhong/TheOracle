@@ -1,0 +1,394 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eval Labeling — Listing Intelligence</title>
+  <style>
+    :root {
+      --bg: #fafaf8;
+      --panel: #ffffff;
+      --ink: #111111;
+      --muted: #6b6b6b;
+      --line: #e5e5e0;
+      --accent: #111111;
+      --ok: #1a7a3e;
+      --err: #b1361b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+      font-size: 15px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px 96px; }
+    header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 32px; }
+    .brand { font-weight: 600; letter-spacing: -0.01em; font-size: 18px; }
+    .brand small { font-weight: 400; color: var(--muted); margin-left: 8px; }
+    nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-size: 14px; }
+    nav a:hover { color: var(--ink); }
+
+    h1 { font-size: 28px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.02em; }
+    .subtitle { color: var(--muted); margin: 0 0 32px; max-width: 720px; }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .panel h2 { font-size: 16px; font-weight: 600; margin: 0 0 16px; letter-spacing: -0.01em; }
+    .panel h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 24px 0 8px; }
+
+    label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+    input[type="text"], input[type="file"], textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      background: var(--bg);
+    }
+    select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: right 12px top 50%, right 7px top 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 28px; }
+    input[type="file"] { padding: 8px; background: white; }
+    textarea { resize: vertical; min-height: 60px; }
+    .field { margin-bottom: 16px; }
+    .helper { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    button.primary {
+      background: var(--accent); color: white; border: 0; border-radius: 6px;
+      padding: 12px 20px; font-size: 14px; font-weight: 500;
+      cursor: pointer; letter-spacing: 0.01em;
+    }
+    button.primary:hover { background: #2a2a2a; }
+    button.danger {
+      background: transparent; color: var(--err); border: 1px solid transparent;
+      padding: 4px 8px; font-size: 12px; cursor: pointer; border-radius: 4px;
+    }
+    button.danger:hover { background: #fdf2ee; border-color: #f4c4b1; }
+
+    .banner {
+      padding: 12px 16px; border-radius: 6px; margin-bottom: 24px; font-size: 14px;
+    }
+    .banner.ok { background: #ebf7ef; border: 1px solid #bfe0cb; color: var(--ok); }
+    .banner.err { background: #fdf2ee; border: 1px solid #f4c4b1; color: var(--err); }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+    @media (max-width: 720px) { .grid2, .grid3, .grid4 { grid-template-columns: 1fr; } }
+
+    .stats { display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .stats b { color: var(--ink); font-weight: 600; }
+
+    table.items { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.items th, table.items td {
+      text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle;
+    }
+    table.items th { font-weight: 500; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+    table.items tr:hover td { background: #faf9f5; }
+    .thumb { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; background: #eee; border: 1px solid var(--line); }
+    .mono { font-family: ui-monospace, SF Mono, Menlo, monospace; font-size: 12px; color: var(--muted); }
+    .pill { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 10px; background: #eef0e9; color: #3a3a3a; }
+    .pill.wardrobe { background: #e7efe9; color: #205c34; }
+    .pill.grailed { background: #eef0f6; color: #2d3a6b; }
+
+    details summary { cursor: pointer; font-weight: 500; list-style: none; }
+    details summary::-webkit-details-marker { display: none; }
+    details[open] summary::after { content: " ▲"; color: var(--muted); }
+    details:not([open]) summary::after { content: " ▼"; color: var(--muted); }
+
+    .two-col { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+    @media (max-width: 960px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">Listing Intelligence<small>Eval Labeling</small></div>
+      <nav>
+        <a href="/listing/">Landing</a>
+        <a href="/listing/demo/">Demo</a>
+        <a href="/listing/docs/">Docs</a>
+      </nav>
+    </header>
+
+    <h1>Ground-Truth Labeling</h1>
+    <p class="subtitle">
+      Add items from your wardrobe with known-correct labels. These are what we
+      measure API accuracy against. Try to get a front shot at minimum; add the
+      care label for material/size and a detail shot for construction notes.
+    </p>
+
+    {% if success_id %}
+    <div class="banner ok">Saved <code>{{ success_id }}</code>. Add another below, or jump to eval by running <code class="mono">python listing_api/eval/run_eval.py</code>.</div>
+    {% endif %}
+    {% if deleted_id %}
+    <div class="banner ok">Deleted <code>{{ deleted_id }}</code>.</div>
+    {% endif %}
+    {% if error %}
+    <div class="banner err">{{ error }}</div>
+    {% endif %}
+
+    <div class="panel">
+      <h2>Add an item</h2>
+      <form method="post" action="{% url 'listing_api:save_label' %}" enctype="multipart/form-data" id="labelForm">
+        <div class="grid2">
+          <div class="field">
+            <label>Item ID</label>
+            <input type="text" name="item_id" value="{{ next_id }}" pattern="[A-Za-z0-9_-]+">
+            <div class="helper">Used as folder name. Auto-incremented if you leave it.</div>
+          </div>
+          <div class="field">
+            <label>Source</label>
+            <input type="text" value="wardrobe" disabled>
+            <div class="helper">All items added here are tagged as wardrobe (high-trust).</div>
+          </div>
+        </div>
+
+        <h3>Photos</h3>
+        <div class="grid4">
+          <div class="field">
+            <label>Front * <span style="color:var(--err)">required</span></label>
+            <input type="file" name="front" accept="image/*" required>
+            <div class="helper">Whole garment, laid flat or on hanger.</div>
+          </div>
+          <div class="field">
+            <label>Back</label>
+            <input type="file" name="back" accept="image/*">
+            <div class="helper">Optional but helps silhouette.</div>
+          </div>
+          <div class="field">
+            <label>Detail</label>
+            <input type="file" name="detail" accept="image/*">
+            <div class="helper">Buttons, stitching, hardware.</div>
+          </div>
+          <div class="field">
+            <label>Care label</label>
+            <input type="file" name="label" accept="image/*">
+            <div class="helper">Required for scoring size_label + material.</div>
+          </div>
+        </div>
+
+        <h3>Category</h3>
+        <div class="grid2">
+          <div class="field">
+            <label>Category *</label>
+            <select name="category" id="category" required>
+              <option value="">— choose —</option>
+              {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Subcategory</label>
+            <input type="text" name="subcategory" id="subcategory" list="subcat-list" placeholder="e.g. Trench Coat">
+            <datalist id="subcat-list">
+              {% for s in subcategories %}<option value="{{ s }}">{% endfor %}
+            </datalist>
+            <div class="helper" id="subcat-hint">Narrows on category select.</div>
+          </div>
+        </div>
+
+        <h3>Brand + materials</h3>
+        <div class="grid2">
+          <div class="field">
+            <label>Brand</label>
+            <input type="text" name="brand" list="brand-list" placeholder="e.g. Burberry (leave blank for no-brand)">
+            <datalist id="brand-list">
+              {% for b in brands %}<option value="{{ b }}">{% endfor %}
+            </datalist>
+            <div class="helper">Read the care label or woven tag. Blank = unknown.</div>
+          </div>
+          <div class="field">
+            <label>Primary material</label>
+            <select name="primary_material">
+              <option value="">— unknown —</option>
+              {% for m in materials %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+            </select>
+            <div class="helper">Fiber listed first / in highest % on care label.</div>
+          </div>
+        </div>
+
+        <h3>Colors + pattern</h3>
+        <div class="grid3">
+          <div class="field">
+            <label>Primary color</label>
+            <select name="primary_color">
+              <option value="">— unknown —</option>
+              {% for c in colors %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Secondary colors</label>
+            <input type="text" name="secondary_colors" placeholder="comma-separated e.g. white, tan">
+          </div>
+          <div class="field">
+            <label>Color palette</label>
+            <select name="color_palette">
+              <option value="">— skip —</option>
+              {% for p in palettes %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Pattern</label>
+            <select name="pattern">
+              <option value="">— skip —</option>
+              {% for p in patterns %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Silhouette tags</label>
+            <input type="text" name="silhouette" list="silhouette-list" placeholder="comma-separated e.g. oversized, long">
+            <datalist id="silhouette-list">
+              {% for s in silhouettes %}<option value="{{ s }}">{% endfor %}
+            </datalist>
+          </div>
+        </div>
+
+        <h3>Size + condition + era</h3>
+        <div class="grid3">
+          <div class="field">
+            <label>Size label</label>
+            <input type="text" name="size_label" placeholder="e.g. M, 38, 32x32">
+            <div class="helper">Copy verbatim from the tag.</div>
+          </div>
+          <div class="field">
+            <label>Condition</label>
+            <select name="condition">
+              <option value="">— skip —</option>
+              {% for code, desc in conditions %}<option value="{{ code }}" title="{{ desc }}">{{ code }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Era estimate</label>
+            <select name="era_estimate">
+              <option value="">— skip —</option>
+              {% for e in eras %}<option value="{{ e }}">{{ e }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <h3>Style (optional)</h3>
+        <div class="field">
+          <label>Style tags</label>
+          <input type="text" name="style_tags" list="tag-list" placeholder="comma-separated e.g. minimalist, preppy, workwear">
+          <datalist id="tag-list">
+            {% for t in style_tags %}<option value="{{ t }}">{% endfor %}
+          </datalist>
+          <div class="helper">Leave blank to skip. Only list tags you're confident about — evaluated as recall.</div>
+        </div>
+
+        <div class="field">
+          <label>Notes (not scored)</label>
+          <textarea name="notes" placeholder="Anything weird about this item, provenance, etc."></textarea>
+        </div>
+
+        <button type="submit" class="primary">Save item</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>Dataset</h2>
+      <div class="stats">
+        <div><b>{{ n_total }}</b> items total</div>
+        {% for src, n in by_source.items %}<div><b>{{ n }}</b> {{ src }}</div>{% endfor %}
+      </div>
+      {% if by_category %}
+      <details>
+        <summary class="mono">by category</summary>
+        <div class="stats" style="margin-top:8px;">
+          {% for cat, n in by_category.items %}<div><b>{{ n }}</b> {{ cat }}</div>{% endfor %}
+        </div>
+      </details>
+      {% endif %}
+
+      <table class="items" style="margin-top:16px;">
+        <thead>
+          <tr>
+            <th></th>
+            <th>ID</th>
+            <th>Category / Subcategory</th>
+            <th>Brand</th>
+            <th>Material</th>
+            <th>Color</th>
+            <th>Cond.</th>
+            <th>#</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in items %}
+          <tr>
+            <td>
+              {% if r.front_file %}
+              <img class="thumb" src="{% url 'listing_api:item_photo' r.folder r.front_file %}" alt="">
+              {% endif %}
+            </td>
+            <td>
+              <div class="mono">{{ r.item_id }}</div>
+              <span class="pill {{ r.source }}">{{ r.source }}</span>
+            </td>
+            <td>
+              {{ r.category }}{% if r.subcategory %} / <span class="mono">{{ r.subcategory }}</span>{% endif %}
+            </td>
+            <td>{{ r.brand|default:"—" }}</td>
+            <td>{{ r.primary_material|default:"—" }}</td>
+            <td>{{ r.primary_color|default:"—" }}</td>
+            <td><span class="mono">{{ r.condition|default:"—" }}</span></td>
+            <td><span class="mono">{{ r.n_images }}ph · {{ r.n_truth_fields }}fl</span></td>
+            <td>
+              <form method="post" action="{% url 'listing_api:delete_label' r.item_id %}" onsubmit="return confirm('Delete {{ r.item_id }}? Photos + meta.json will be removed.');" style="display:inline">
+                <button class="danger" type="submit">delete</button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" style="text-align:center; color: var(--muted); padding: 32px;">No items yet. Add one above.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Run the eval</h2>
+      <p style="color: var(--muted); margin: 0 0 12px; font-size: 14px;">
+        After labeling a batch, run the scoring pipeline from the command line:
+      </p>
+      <pre style="background:#0f0f0f; color:#e8e8e8; padding:12px 16px; border-radius:6px; font-size:13px; overflow-x:auto; margin:0;">python listing_api/eval/run_eval.py --out listing_api/eval/results/run.md</pre>
+      <p class="helper" style="margin-top: 8px;">
+        It'll call the live API on every item, score each field against the ground truth
+        you typed here, and write a markdown report with per-field accuracy tables.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Filter subcategory datalist based on chosen category, for faster entry.
+    const subcatMap = {{ subcategories_by_cat|safe }};
+    const catEl = document.getElementById('category');
+    const subEl = document.getElementById('subcategory');
+    const subList = document.getElementById('subcat-list');
+    const hint = document.getElementById('subcat-hint');
+    if (catEl && subList) {
+      catEl.addEventListener('change', () => {
+        const cat = catEl.value;
+        const options = subcatMap[cat] || [];
+        subList.innerHTML = options.map(o => `<option value="${o}">`).join('');
+        if (options.length) {
+          hint.textContent = `${options.length} options for ${cat}`;
+        } else {
+          hint.textContent = 'Free text.';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
