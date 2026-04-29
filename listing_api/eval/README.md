@@ -42,8 +42,11 @@ truth, how often were we right?"
 
 ## Adding your own items (high-trust ground truth)
 
-For your own wardrobe, you trust the labels 100%. Create a folder under
-`listing_api/eval/items/`:
+The browser-based way: visit `/listing/eval/` (locally or on the deployed site
+as a staff user). Drop in 4 photos, fill out taxonomy-backed dropdowns, save.
+
+The JSON way: For your own wardrobe, you trust the labels 100%. Create a folder
+under `listing_api/eval/items/`:
 
 ```
 items/
@@ -102,6 +105,40 @@ python -m listing_api.eval.run_eval --limit 5
 python -m listing_api.eval.run_eval --items 001 003 wardrobe-002
 ```
 
+## Adding TRR / Vestiaire Collective items (one URL at a time)
+
+`fetch_listing.py` pulls a single product page from The RealReal or Vestiaire
+Collective and writes it as an eval item. **TRR labels are professional human
+curation** — exactly what your API is replacing — so accuracy vs TRR is the
+sales pitch metric.
+
+```bash
+# Live URL (works when Cloudflare doesn't block the request)
+python -m listing_api.eval.fetch_listing \
+    --url "https://www.therealreal.com/products/women/clothing/coats/..."
+
+# If Cloudflare blocks the live fetch, save the page from your browser
+# (Cmd+S → "Web Page, HTML Only") and pass --html instead:
+python -m listing_api.eval.fetch_listing --html ~/Downloads/saved_page.html
+
+# Preview what we'd extract without writing anything:
+python -m listing_api.eval.fetch_listing --url "..." --dry-run --print-raw
+
+# Skip photos (faster iteration when label-checking):
+python -m listing_api.eval.fetch_listing --url "..." --no-photos
+```
+
+Auto-generates ids like `trr-001`, `vc-001`. Source detection from the URL is
+automatic; pass `--source trr` or `--source vestiaire` to force it. The fetcher
+extracts the JSON-LD Product node + `__NEXT_DATA__` blob from the page and
+maps fields (brand, category, color, material, condition, size) to our
+taxonomy.
+
+**Manual curation, low volume.** Pick 10 items per source by hand. Don't try
+to bulk scrape — both sites' ToS prohibits it, and the technical anti-bot
+walls are real. The eval/items/{trr-*,vc-*} folders are gitignored — keep
+them local.
+
 ## Caveats
 
 - **30 items is a sanity check, not a published benchmark.** Per-field
@@ -121,6 +158,7 @@ python -m listing_api.eval.run_eval --items 001 003 wardrobe-002
 - `run_eval.py` — runs the pipeline on each item, outputs JSON + markdown
 - `report.py` — markdown report generator (called by `run_eval` automatically)
 - `scrape_grailed.py` — pulls labeled listings from Grailed's public Algolia API
+- `fetch_listing.py` — single-URL fetcher for TRR + Vestiaire Collective product pages
 
 ## Legal note on scraping
 
