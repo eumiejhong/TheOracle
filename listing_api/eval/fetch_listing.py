@@ -82,13 +82,29 @@ DEFAULT_HEADERS = {
 def detect_source(url_or_path: str) -> str | None:
     """Return 'trr', 'vestiaire', or None based on a URL or file path.
 
-    Tolerates bare keywords too (so saved HTML named ``burberry_trr.html``
-    still resolves correctly without --source).
+    Tolerates bare keywords and spacing variations so saved-HTML filenames
+    like ``...The RealReal.html`` resolve correctly without --source.
     """
     s = (url_or_path or "").lower()
-    if "therealreal" in s or "_trr" in s or "/trr" in s or s.startswith("trr"):
+    if (
+        "therealreal" in s or "the realreal" in s or "real real" in s
+        or "_trr" in s or "/trr" in s or s.startswith("trr")
+    ):
         return "trr"
-    if "vestiairecollective" in s or "vestiaire" in s or "_vc" in s or "/vc" in s:
+    if (
+        "vestiairecollective" in s or "vestiaire" in s
+        or "_vc" in s or "/vc" in s
+    ):
+        return "vestiaire"
+    return None
+
+
+def detect_source_from_html(html: str) -> str | None:
+    """Last-resort source detection by sniffing the HTML body for site markers."""
+    head = html[:8000].lower()  # first 8KB is enough to spot canonical/og:url
+    if "therealreal.com" in head or "therealreal" in head:
+        return "trr"
+    if "vestiairecollective.com" in head or "vestiaire" in head:
         return "vestiaire"
     return None
 
@@ -189,6 +205,15 @@ def walk_for_product_node(data: Any, source: str) -> dict | None:
     images/photos or a name/title. Different sites bury this in different
     paths (TRR: pageProps.initialState.products[0]; VC: pageProps.product).
     """
+    # TRR fast path — the product is reliably at this exact location
+    if source == "trr" and isinstance(data, dict):
+        try:
+            node = data["props"]["pageProps"]["product"]
+            if isinstance(node, dict) and node.get("name"):
+                return node
+        except (KeyError, TypeError):
+            pass
+
     best: dict | None = None
     best_score = 0
 
@@ -203,6 +228,7 @@ def walk_for_product_node(data: Any, source: str) -> dict | None:
         if {"taxonomy", "category", "categories"} & keys: score += 1
         if {"size", "sizeName"} & keys: score += 1
         if {"composition", "material", "materials"} & keys: score += 1
+        if {"attributes"} & keys: score += 2  # TRR-style structured attributes
         return score
 
     def walk(node: Any) -> None:
@@ -397,8 +423,8 @@ def map_color(raw: str | None) -> str | None:
 MATERIAL_REGEX = re.compile(
     r"\b(?:100%\s+|pure\s+)?(wool|cashmere|cotton|linen|silk|leather|suede|"
     r"nylon|polyester|polyamide|rayon|viscose|denim|velvet|tweed|satin|chiffon|"
-    r"lace|fur|shearling|down|merino|alpaca|lambswool|mohair|boucle|"
-    r"calfskin|lambskin|tencel|modal|elastane|spandex)\b",
+    r"lace|fur|shearling|down|merino|alpaca|lambswool|mohair|boucle|fleece|"
+    r"gabardine|calfskin|lambskin|tencel|modal|elastane|spandex)\b",
     re.I,
 )
 
@@ -442,6 +468,38 @@ def _images_from_jsonld(prod: dict) -> list[str]:
     if isinstance(img, list):
         return [x for x in img if isinstance(x, str)]
     return []
+
+
+def _attrs_from_trr_node(node: dict) -> dict[str, str]:
+    """Pull TRR's `attributes` list ([{label, type, values}]) into a flat dict.
+
+    Returns keys like 'color', 'fabric', 'clothing-size', 'condition' (the
+    'type' field), each mapped to the joined values string.
+    """
+    out: dict[str, str] = {}
+    attrs = node.get("attributes")
+    if not isinstance(attrs, list):
+        return out
+    for a in attrs:
+        if not isinstance(a, dict):
+            continue
+        type_key = (a.get("type") or "").lower().strip()
+        label_key = (a.get("label") or "").lower().strip()
+        values = a.get("values")
+        if isinstance(values, list):
+            joined = ", ".join(str(v) for v in values if v is not None)
+        elif isinstance(values, str):
+            joined = values
+        else:
+            continue
+        if not joined:
+            continue
+        # Index by both type and label so callers can look up either way.
+        if type_key:
+            out.setdefault(type_key, joined)
+        if label_key:
+            out.setdefault(label_key, joined)
+    return out
 
 
 def _images_from_node(node: dict) -> list[str]:
@@ -500,6 +558,12 @@ def parse_listing(html: str, source: str) -> dict:
     next_data = extract_next_data(html)
     nxt_node = walk_for_product_node(next_data, source) if next_data else None
 
+    # TRR stores color/fabric/size as a structured attributes[] array on the
+    # product node. Extract once so the field-specific blocks below can use it.
+    trr_attrs: dict[str, str] = {}
+    if source == "trr" and nxt_node:
+        trr_attrs = _attrs_from_trr_node(nxt_node)
+
     raw: dict[str, Any] = {}
 
     # ---- TITLE ----
@@ -547,12 +611,13 @@ def parse_listing(html: str, source: str) -> dict:
     gt: dict = {}
 
     # Category — try JSON-LD category, then breadcrumb-ish fields, then title.
+    # For TRR, JSON-LD doesn't carry category and product.category.name is just
+    # gender ("Women"); the real signal is the URL path or canonical link.
     category_raw = None
     if isinstance((prod or {}).get("category"), str):
         category_raw = prod["category"]
     if not category_raw and nxt_node:
         category_raw = _first_str(nxt_node, "category", "taxonomy", "categoryName", "type")
-        # Vestiaire often nests a tree
         if not category_raw:
             cat_obj = nxt_node.get("category") if isinstance(nxt_node.get("category"), dict) else None
             if cat_obj:
@@ -560,6 +625,19 @@ def parse_listing(html: str, source: str) -> dict:
                     str(v) for k, v in cat_obj.items()
                     if isinstance(v, str)
                 )
+    if source == "trr":
+        # TRR's URL path is gold for category: /products/women/clothing/coats/...
+        canonical = re.search(
+            r'<link[^>]+rel=["\']canonical["\'][^>]+href=["\']([^"\']+)["\']',
+            html,
+        )
+        url_path = ""
+        if canonical:
+            url_path = urlparse(canonical.group(1)).path
+        if not url_path and parsed.get("url"):
+            url_path = urlparse(str(parsed["url"])).path
+        if url_path:
+            category_raw = (category_raw or "") + " " + url_path.replace("-", " ").replace("/", " ")
     raw["category_raw"] = category_raw
     cat_text_for_match = " ".join(filter(None, [category_raw or "", title]))
     cat, sub = map_category_string(cat_text_for_match)
@@ -568,15 +646,22 @@ def parse_listing(html: str, source: str) -> dict:
     if sub:
         gt["subcategory"] = sub
 
-    # Color
-    color_raw = (prod or {}).get("color") or _first_str(nxt_node or {}, "color", "colorName")
+    # Color — TRR attributes win, then JSON-LD, then __NEXT_DATA__ direct, then title
+    color_raw = (
+        trr_attrs.get("color") or
+        (prod or {}).get("color") or
+        _first_str(nxt_node or {}, "color", "colorName")
+    )
     raw["color_raw"] = color_raw
     color = map_color(color_raw) or map_color(title)
     if color:
         gt["primary_color"] = color
 
-    # Material — JSON-LD `material`, then __NEXT_DATA__ composition, then desc
+    # Material — TRR fabric attribute first, then JSON-LD, then __NEXT_DATA__,
+    # then description. We feed each candidate through MATERIAL_REGEX.
     mat_sources: list[str] = []
+    if trr_attrs.get("fabric"):
+        mat_sources.append(trr_attrs["fabric"])
     for src in (
         (prod or {}).get("material"),
         _first_str(nxt_node or {}, "material", "materials", "composition", "fabric"),
@@ -593,10 +678,18 @@ def parse_listing(html: str, source: str) -> dict:
             gt["primary_material"] = m
             break
 
-    # Condition
+    # Condition — TRR exposes it as a clean prose grade on product.condition.
+    # JSON-LD's offers.itemCondition is just a schema.org URL on TRR (useless).
     condition_raw = None
-    if isinstance((prod or {}).get("offers"), dict):
-        condition_raw = (prod["offers"] or {}).get("itemCondition")
+    if source == "trr" and nxt_node:
+        cval = nxt_node.get("condition")
+        if isinstance(cval, str) and cval.strip():
+            condition_raw = cval.strip()
+    if not condition_raw and isinstance((prod or {}).get("offers"), dict):
+        ic = (prod["offers"] or {}).get("itemCondition")
+        # Skip schema.org URLs — they don't carry a grade
+        if isinstance(ic, str) and not ic.startswith("http"):
+            condition_raw = ic
     if not condition_raw and nxt_node:
         condition_raw = _first_str(nxt_node, "condition", "conditionDisplay", "conditionTitle", "conditionName")
     raw["condition_raw"] = condition_raw
@@ -604,8 +697,14 @@ def parse_listing(html: str, source: str) -> dict:
     if cond:
         gt["condition"] = cond
 
-    # Size
-    size_raw = (prod or {}).get("size") or _first_str(nxt_node or {}, "size", "sizeName", "sizeLabel")
+    # Size — TRR puts clothing-size in attributes; VC uses direct fields
+    size_raw = (
+        trr_attrs.get("clothing-size") or
+        trr_attrs.get("shoe-size") or
+        trr_attrs.get("size") or
+        (prod or {}).get("size") or
+        _first_str(nxt_node or {}, "size", "sizeName", "sizeLabel")
+    )
     raw["size_raw"] = size_raw
     if isinstance(size_raw, str) and size_raw.strip():
         gt["size_label"] = size_raw.strip()
@@ -707,14 +806,14 @@ def main():
                     help="Also print the raw signals from JSON-LD / __NEXT_DATA__")
     args = ap.parse_args()
 
-    # 1. Source resolution
-    source = args.source if args.source != "auto" else detect_source(args.url or args.html or "")
-    if not source:
-        print("ERROR: couldn't auto-detect source. Pass --source trr or --source vestiaire.")
-        sys.exit(2)
-    print(f"[fetch] source = {source}")
+    # 1. Resolve source from the path/URL if we can; otherwise we'll sniff the HTML body
+    source: str | None = None
+    if args.source != "auto":
+        source = args.source
+    else:
+        source = detect_source(args.url or args.html or "")
 
-    # 2. HTML retrieval
+    # 2. HTML retrieval (and last-resort source detection if needed)
     if args.url:
         print(f"[fetch] GET {args.url}")
         try:
@@ -735,6 +834,14 @@ def main():
         print(f"[fetch] reading {path}")
         html = load_html(path)
         url_for_meta = None
+
+    if not source:
+        source = detect_source_from_html(html)
+    if not source:
+        print("ERROR: couldn't detect source from URL/path or HTML body.")
+        print("       Pass --source trr or --source vestiaire explicitly.")
+        sys.exit(2)
+    print(f"[fetch] source = {source}")
 
     print(f"[fetch] HTML size: {len(html):,} chars")
 
