@@ -292,7 +292,10 @@ CATEGORY_KEYWORDS: list[tuple[str, str, str | None]] = [
     ("sneaker",            "Shoes", "Sneakers"),
     ("boot",               "Shoes", "Boots"),
     ("loafer",             "Shoes", "Loafers"),
+    ("pump",               "Shoes", "Heels"),
     ("heel",               "Shoes", "Heels"),
+    ("flat",               "Shoes", "Flats"),
+    ("mule",               "Shoes", "Mules"),
     ("sandal",             "Shoes", "Sandals"),
     ("shoe",               "Shoes", None),
     ("tote",               "Bag", "Tote"),
@@ -405,17 +408,47 @@ COLOR_WORDS = {
 
 
 def map_color(raw: str | None) -> str | None:
+    """Map a free-text color string to one of our COLORS_PRIMARY.
+
+    Prefers concrete colors over palette descriptors ("multi", "print") and
+    skips TRR-style palette buckets ("neutrals", "blacks", "warm tones") that
+    don't pin down a single primary color.
+    """
     if not raw:
         return None
     text = str(raw).lower()
-    # Multiple words separated by '/' or ',' — take the first match
-    for token in re.split(r"[\s,/&]+", text):
-        if token in COLOR_WORDS:
+
+    # TRR sometimes reports the color *bucket* rather than a real color
+    # (e.g. "Neutrals", "Warm Tones"). These are unhelpful as ground truth —
+    # caller should fall back to title/description.
+    PALETTE_BUCKETS = {
+        "neutrals", "warm tones", "cool tones", "earth tones", "pastels",
+        "brights", "blacks", "whites", "browns", "blues", "greens", "reds",
+        "yellows", "purples", "pinks", "greys", "grays", "metallics",
+    }
+    if text.strip() in PALETTE_BUCKETS:
+        return None
+
+    palette_tokens = {"multi", "multicolor", "multicolour", "print"}
+    tokens = re.split(r"[\s,/&]+", text)
+
+    # Pass 1: prefer a concrete color (skip palette tokens).
+    for token in tokens:
+        if token in COLOR_WORDS and token not in palette_tokens:
             return COLOR_WORDS[token]
-    # Substring fallback (e.g., "off-white")
+
+    # Pass 2: substring search for concrete colors (e.g., "off-white").
     for word, canonical in COLOR_WORDS.items():
+        if word in palette_tokens:
+            continue
         if word in text:
             return canonical
+
+    # Pass 3: only now fall back to palette tokens (multi/print).
+    for token in tokens:
+        if token in COLOR_WORDS:
+            return COLOR_WORDS[token]
+
     return None
 
 
@@ -429,10 +462,26 @@ MATERIAL_REGEX = re.compile(
 )
 
 
+# Strings that signal the seller didn't actually identify the fabric — we
+# should NOT treat anything in such a description as ground truth.
+_MATERIAL_GUESS_PHRASES = (
+    "not listed",
+    "feels like",
+    "appears to be",
+    "may be",
+    "unknown",
+    "unidentified",
+    "best guess",
+    "presumably",
+)
+
+
 def map_material(raw: str | None) -> str | None:
     if not raw:
         return None
     text = str(raw)
+    if any(p in text.lower() for p in _MATERIAL_GUESS_PHRASES):
+        return None
     counts: dict[str, int] = {}
     for m in MATERIAL_REGEX.finditer(text):
         word = m.group(1).lower()
@@ -646,14 +695,21 @@ def parse_listing(html: str, source: str) -> dict:
     if sub:
         gt["subcategory"] = sub
 
-    # Color — TRR attributes win, then JSON-LD, then __NEXT_DATA__ direct, then title
+    # Color — TRR attributes win, then JSON-LD, then __NEXT_DATA__ direct,
+    # then title, then description. We need that many fallbacks because TRR
+    # sometimes only stores a generic palette bucket ("Neutrals") which
+    # map_color rejects, and the real color word lives in the prose.
     color_raw = (
         trr_attrs.get("color") or
         (prod or {}).get("color") or
         _first_str(nxt_node or {}, "color", "colorName")
     )
     raw["color_raw"] = color_raw
-    color = map_color(color_raw) or map_color(title)
+    color = (
+        map_color(color_raw) or
+        map_color(title) or
+        map_color(parsed["description"][:300] if parsed["description"] else None)
+    )
     if color:
         gt["primary_color"] = color
 
