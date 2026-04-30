@@ -251,6 +251,19 @@ def walk_for_product_node(data: Any, source: str) -> dict | None:
 # Source-specific normalization
 # ---------------------------------------------------------------------------
 
+# Brand strings that platforms use as catch-all buckets for unbranded items
+# (TRR especially: "Fur" for fur coats, "Leather" for leather goods, etc.).
+# Encoding these as truth would be wrong because they're material categories,
+# not designers.
+BRAND_PLACEHOLDERS = {
+    "fur", "leather", "denim", "cotton", "wool", "silk", "vintage",
+    "unknown", "unbranded", "no brand", "designer", "designers",
+    "japanese brand", "italian brand", "french brand", "made in italy",
+    "made in usa", "made in japan", "athletic", "streetwear", "workwear",
+    "military",
+}
+
+
 # Both sites use prose category strings. Map keywords to our taxonomy.
 # Order matters — more specific first.
 CATEGORY_KEYWORDS: list[tuple[str, str, str | None]] = [
@@ -264,11 +277,14 @@ CATEGORY_KEYWORDS: list[tuple[str, str, str | None]] = [
     ("blazer",             "Outerwear", "Blazer"),
     ("vest",               "Outerwear", "Vest"),
     ("cape",               "Outerwear", "Cape"),
+    ("fur coat",           "Outerwear", "Other Outerwear"),
+    ("shearling",          "Outerwear", "Other Outerwear"),
     ("wool coat",          "Outerwear", "Wool Coat"),
     ("coat",               "Outerwear", "Wool Coat"),
     ("jacket",             "Outerwear", "Other Outerwear"),
     ("outerwear",          "Outerwear", None),
     ("cardigan",           "Top", "Cardigan"),
+    ("turtleneck",         "Top", "Sweater"),
     ("sweater",            "Top", "Sweater"),
     ("knit",               "Top", "Sweater"),
     ("hoodie",             "Top", "Hoodie"),
@@ -277,6 +293,8 @@ CATEGORY_KEYWORDS: list[tuple[str, str, str | None]] = [
     ("tee",                "Top", "T-Shirt"),
     ("polo",               "Top", "Polo"),
     ("blouse",             "Top", "Blouse"),
+    ("button-up",          "Top", "Shirt"),
+    ("button up",          "Top", "Shirt"),
     ("shirt",              "Top", "Shirt"),
     ("top",                "Top", None),
     ("jeans",              "Bottom", "Jeans"),
@@ -457,7 +475,7 @@ MATERIAL_REGEX = re.compile(
     r"\b(?:100%\s+|pure\s+)?(wool|cashmere|cotton|linen|silk|leather|suede|"
     r"nylon|polyester|polyamide|rayon|viscose|denim|velvet|tweed|satin|chiffon|"
     r"lace|fur|shearling|down|merino|alpaca|lambswool|mohair|boucle|fleece|"
-    r"gabardine|calfskin|lambskin|tencel|modal|elastane|spandex)\b",
+    r"gabardine|calfskin|lambskin|tencel|lyocell|modal|elastane|spandex)\b",
     re.I,
 )
 
@@ -637,9 +655,15 @@ def parse_listing(html: str, source: str) -> dict:
         if not brand_raw and isinstance(nxt_node.get("brand"), str):
             brand_raw = nxt_node["brand"]
     if brand_raw:
-        canonical, known = taxonomy.normalize_brand(brand_raw)
-        parsed["brand"] = canonical if known else brand_raw.strip()
-        raw["brand_raw"] = brand_raw
+        # Skip platform placeholder buckets ("Fur", "Vintage", "Japanese Brand"
+        # etc.) — they're material/category labels, not real designers.
+        if brand_raw.strip().lower() in BRAND_PLACEHOLDERS:
+            raw["brand_raw"] = brand_raw
+            raw["brand_skipped_as_placeholder"] = True
+        else:
+            canonical, known = taxonomy.normalize_brand(brand_raw)
+            parsed["brand"] = canonical if known else brand_raw.strip()
+            raw["brand_raw"] = brand_raw
 
     # ---- DESCRIPTION ----
     desc = (
